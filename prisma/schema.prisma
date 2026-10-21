@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Client {
+  id             String             @id @default(cuid())
+  name           String // English name
+  nameAr         String // Arabic name
+  slug           String             @unique // URL-safe ID ("al-afnan")
+  emirate        String // Dubai, Sharjah, RAK, etc. (where the company is based)
+  emiratesServed Json               @default("[]") // other emirates served, e.g. ["Ajman", "Abu Dhabi"]
+  areas          Json // ["Al Nahda", "Al Majaz"]
+  services       Json // ["furniture moving", "packing"]
+  phone          String
+  whatsapp       String
+  website        String?
+  brandColors    Json? // {primary, secondary}
+  brandSpecs     Json? // {truckType, uniform, initialSetup}
+  tone           String? // "professional, trustworthy"
+  notes          String?
+  apiCredentials Json? // Google OAuth tokens per service
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  content        GeneratedContent[]
+  posts          GBPPost[]
+  audits         Audit[]
+}
+
+model GeneratedContent {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type      String // gbp, faq, blog, meta, fb-ad, report, humanized
+  subtype   String? // emirate name, service name, etc.
+  language  String // ar, en, both
+  content   String // The generated text (full)
+  contentAr String? // Arabic version if generated separately
+  metadata  Json? // char counts, keyword, options used
+  humanized Boolean  @default(false)
+  score     Float? // Humanizer AI-detection score
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
+}
+
+model PromptTemplate {
+  id              String   @id @default(cuid())
+  name            String   @unique // gbp-description, faq-generation, etc.
+  systemPrompt    String // The full system prompt
+  fewShotExamples Json? // Array of example inputs/outputs
+  version         Int      @default(1)
+  updatedAt       DateTime @updatedAt
+}
+
+model GBPPost {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  scheduledDate DateTime
+  category      String // service-highlight, customer-tip, seasonal-offer, area-specific, trust-signal, behind-the-scenes
+  textAr        String // Arabic is the primary version
+  textEn        String
+  language      String   @default("both") // en, ar, both: which versions were written (the other column is left empty)
+  postType      String // whats-new, offer, event
+  cta           String // call, learn-more, book
+  keywords      Json? // ["Sharjah movers", ...]
+  imagePrompt   String?
+  status        String   @default("draft") // draft, approved, published
+  createdAt     DateTime @default(now())
+
+  @@index([clientId, scheduledDate])
+}
+
+model Audit {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  url             String
+  scores          Json // {onPage, schema, speed, indexation, overall, passed/total per category, pages}
+  findings        Json // [{id, category, severity, title, detail, targets: []}]
+  recommendations Json // [{findingId, text}]
+  createdAt       DateTime @default(now())
+
+  @@index([clientId, createdAt])
+}

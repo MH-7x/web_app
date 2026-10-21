@@ -1,0 +1,14 @@
+/**
+ * Hand-written GBP descriptions used as few-shot examples. They show voice and structure only;
+ * the prompt tells the model not to reuse their facts (years in business, etc.).
+ * Obvious typos from the originals ("our team", "We operate", "Sharjah") are corrected so they are not imitated.
+ */
+export const GBP_EXAMPLES_EN = [
+  `Since 1998, we've built this company on one simple promise — treat every move like it's our own. With 25+ years of experience across all UAE emirates, we handle everything from apartments and villas to offices and industrial equipment. We're not a call-and-disappear operation. No hidden charges, no surprises — just a clear WhatsApp quote, a trained bilingual team, and fully enclosed trucks that protect your belongings from UAE's heat and sandstorms. You pay only after you're completely satisfied. That's our word. Call, WhatsApp, or request a free quote online. Thousands of families and businesses across the UAE trust us — and once you move with us, you'll understand why.`,
+  `Al Afnan Furniture Transfer is a Sharjah based moving company providing reliable movers and packers in Sharjah for homes, apartments, villas, offices, and furniture transfers. Our team can assist with packing, furniture preparation, loading, transportation, unloading, and related moving requirements based on the needs of your move. With 10 years of experience, transparent pricing with no hidden fees, and free moving estimates, we handle every relocation with care. Trusted Movers in Sharjah Serving all areas of Sharjah and across the UAE. We operate across all 7 UAE Emirates, so moving from Sharjah to Dubai, Abu Dhabi, Ajman, or any other emirate is handled with the same professional standard.`,
+  `Al Mezan Movers and Packers is your go-to moving company in the UAE. We provide residential and commercial moving services. We know that every item, whether it is glass or heavy machinery, should be treated with care. Our team of professionals will ensure that your items reach their destination safely and within time. Our services include villa moving, apartment moving, handyman services, and storage. At Mezan, we provide moving services with a commitment to customer satisfaction, and we have become one of the most trusted moving companies in the Emirates. Make your moving experience an efficient and caring one.`,
+]
+
+export const GBP_EXAMPLES_AR = [
+  `شركة النمره نقل اثاث في دبي — شقق ومنازل وفلل ومكاتب. فريقنا يتولى الفك والتغليف والنقل والتركيب بشاحنات مغلقة. السعر يُحدد قبل وصولنا ولا يتغير يوم النقل — ما اتفقنا عليه هو ما تدفعه، بدون مفاجآت. نساعد في استخراج تصاريح النقل، ونوفر تخزين الأثاث قصير وطويل الأمد. نصل إلى جميع مناطق دبي: مارينا دبي، وسط المدينة، بيزنس باي، جميرا، البرشاء، ديرة، بر دبي، مردف، القوز، نخلة جميرا، دبي هيلز، أرابيان رانشز، جميرا فيلدج سيركل، سيليكون أويسس، النهدة، القصيص، ديسكفري غاردنز، إنترناشيونال سيتي، ذا سبرينغز، جي إل تي، وغيرها. راسلنا على واتساب ونرد في دقائق`,
+]
