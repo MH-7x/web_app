@@ -124,7 +124,7 @@
   body {
     @apply bg-background text-foreground;
   }
-  button:not(:disabled), [role="button"]:not(:disabled) {
+  button:not(:disabled), [role="button"]:not(:disabled), select:not(:disabled), summary, label:has(input[type="checkbox"], input[type="radio"]) {
     cursor: pointer;
   }
   html {

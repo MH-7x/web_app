@@ -6,6 +6,7 @@
  *          {{#name}}...{{/name}} is kept only when the variable is not empty (it can use {{name}} inside).
  */
 
+import type { ClientCategory } from "@/lib/constants"
 import { FB_EXAMPLES_AR, FB_EXAMPLES_EN } from "@/lib/prompts/fb-examples"
 import { GBP_EXAMPLES_AR, GBP_EXAMPLES_EN } from "@/lib/prompts/gbp-examples"
 import { HUMANIZER_RULES, SCORER_SYSTEM_PROMPT } from "@/lib/prompts/humanizer"
@@ -25,18 +26,101 @@ export type TemplateDef = {
   examples: unknown
 }
 
+const CATEGORY_CONTEXT: TemplateVariable = {
+  name: "category_context",
+  description: "Business-category instructions for non-moving clients (used furniture, pickup rental). Empty for moving companies. Added to the top of the prompt automatically when you do not place it yourself",
+}
+
 const CLIENT: TemplateVariable[] = [
   { name: "client_name", description: "Company name in English" },
   { name: "client_name_ar", description: "Company name in Arabic" },
   { name: "emirate", description: "The client's primary emirate" },
   { name: "tone", description: "Tone words chosen for the client, e.g. professional, trustworthy" },
   { name: "client_brief", description: "A block of facts about the client: services, areas, website, fleet, uniform, notes" },
+  CATEGORY_CONTEXT,
 ]
 const LANGUAGE: TemplateVariable = { name: "language_rule", description: "Instruction for the output language (English or Arabic)" }
 const GUARD: TemplateVariable = { name: "no_inventing", description: "The rule against inventing facts, prices or awards" }
 const EXAMPLES: TemplateVariable = { name: "examples", description: "The few-shot examples below, formatted as a list. Empty when there are none" }
 
 const SCHEMA_NOTE = "Return only the description text."
+
+/* -------------------------------------------------------- business category */
+
+type CategoryProfile = {
+  business: string
+  services: string
+  angles: string
+  facts: string
+  images: string
+  tip: string
+  fallbackServices: string
+}
+
+const CATEGORY_PROFILES: Record<Exclude<ClientCategory, "moving">, CategoryProfile> = {
+  used_furniture: {
+    business: "a used furniture dealer in the UAE (buying, selling and restoring pre-owned furniture)",
+    services:
+      "Services are about buying used furniture, selling it, restoration, delivery, home staging, office furniture clearance, pickup and inspection or appraisal. Describe them in those terms: what the shop buys, what condition the pieces are in, how a seller gets paid, how a buyer gets the piece home.",
+    angles:
+      "Lead with affordability (good furniture at a fraction of the new price), quality (inspected, restored, honest condition), and variety (a changing stock of sofas, beds, dining sets, wardrobes and office furniture). Reliability and speed of a move are not the point here.",
+    facts:
+      "Customers are two kinds of people: sellers who want to clear furniture quickly for a fair price (people leaving the UAE, upgrading, closing an office) and buyers furnishing a home or office on a budget.",
+    images:
+      "Showrooms and furniture displays: arranged sofas, dining sets, bedroom sets and wardrobes, a restored piece being finished by a craftsperson, a staged living room, price-tagged items in a warehouse showroom. Do not show moving trucks or loading scenes unless the post is specifically about delivery.",
+    tip: "A useful tip for buying or selling used furniture in the UAE (checking condition, solid wood vs veneer, pricing, preparing a piece for sale, getting it home).",
+    fallbackServices: "buying and selling used furniture",
+  },
+  pickup_rental: {
+    business: "a pickup truck rental company in the UAE (1 to 3 ton pickups rented daily, weekly or monthly, self-drive or with a driver)",
+    services:
+      "Services are about renting pickups: 1-ton, 2-ton and 3-ton vehicles, self-drive or with a driver, on daily, weekly or monthly terms, plus event logistics and small-business delivery. Describe them in those terms: which load suits which size, how long the rental runs, what is included.",
+    angles:
+      "Lead with fleet availability (the right size ready when needed), pricing (clear daily, weekly and monthly rates, never invented figures), flexibility (self-drive or driver, short or long term) and coverage area (which emirates and areas are served).",
+    facts:
+      "Customers are small businesses, shop owners, contractors, event organisers and individuals who need a vehicle for a load without buying one.",
+    images:
+      "Truck fleets and delivery vans: a row of clean pickups parked at a depot, a pickup loaded with boxes or goods on a UAE road, a delivery van at a shop, a driver handing over keys. Do not show household moving crews or furniture showrooms.",
+    tip: "A useful tip for renting a pickup in the UAE (choosing 1, 2 or 3 ton, documents needed, self-drive vs driver, how rental periods work, loading and securing cargo).",
+    fallbackServices: "pickup truck rental",
+  },
+}
+
+/**
+ * Extra system-prompt section for a client's business category. Empty for "moving", so moving prompts stay exactly as
+ * they are. For the other categories it says what the business is and how the ad angles and imagery change, and tells
+ * the model to read the moving-company wording in the prompt below it as that business.
+ */
+export function getCategoryContext(category: string | null | undefined) {
+  if (!category || category === "moving" || !(category in CATEGORY_PROFILES)) return ""
+  const p = CATEGORY_PROFILES[category as keyof typeof CATEGORY_PROFILES]
+  return `BUSINESS CATEGORY (this overrides any wording below that assumes a moving company): the client is ${p.business}, not a moving company. Wherever the instructions below say "moving company", "movers", "moves" or "relocation", read them as this business instead.
+
+${p.services}
+
+${p.facts}
+
+Angles and benefits: ${p.angles}
+
+Image prompts must show: ${p.images}`
+}
+
+/** What a post or image prompt should depict for this category, as one sentence. Empty for moving. */
+export function getCategoryImageGuide(category: string | null | undefined) {
+  if (!category || !(category in CATEGORY_PROFILES)) return ""
+  return CATEGORY_PROFILES[category as keyof typeof CATEGORY_PROFILES].images
+}
+
+export function getCategoryTip(category: string | null | undefined) {
+  if (!category || !(category in CATEGORY_PROFILES)) return ""
+  return CATEGORY_PROFILES[category as keyof typeof CATEGORY_PROFILES].tip
+}
+
+/** The service list to fall back on when a client has none. */
+export function getCategoryFallbackServices(category: string | null | undefined) {
+  if (!category || !(category in CATEGORY_PROFILES)) return "residential and commercial moving"
+  return CATEGORY_PROFILES[category as keyof typeof CATEGORY_PROFILES].fallbackServices
+}
 
 export const TEMPLATE_DEFS: TemplateDef[] = [
   {
@@ -145,7 +229,7 @@ Hard limits: title at most {{title_max}} characters including spaces; descriptio
     description: "Facebook and Instagram ad variations for one emirate.",
     variables: [
       { name: "count", description: "How many ad variations to write" },
-      ...CLIENT.filter((v) => ["client_name", "client_name_ar", "emirate"].includes(v.name)),
+      ...CLIENT.filter((v) => ["client_name", "client_name_ar", "emirate", "category_context"].includes(v.name)),
       { name: "objective_guide", description: "What the chosen campaign objective means" },
       LANGUAGE,
       { name: "headline_max", description: "Headline length limit" },
@@ -225,7 +309,7 @@ Company details:
     name: "humanizer",
     label: "Humanizer",
     description: "Rules for removing AI-writing patterns. The strictness level adds its own instructions at the end.",
-    variables: [{ name: "strictness_rules", description: "Instructions for the chosen strictness (Light, Medium or Strict). Keep this at the end" }, EXAMPLES],
+    variables: [{ name: "strictness_rules", description: "Instructions for the chosen strictness (Light, Medium or Strict). Keep this at the end" }, CATEGORY_CONTEXT, EXAMPLES],
     systemPrompt: `${HUMANIZER_RULES}
 
 {{strictness_rules}}
@@ -251,7 +335,7 @@ Company details:
     name: "report",
     label: "Monthly Report",
     description: "The narrative monthly performance report.",
-    variables: [EXAMPLES],
+    variables: [CATEGORY_CONTEXT, EXAMPLES],
     systemPrompt: REPORT_SYSTEM_PROMPT,
     examples: [],
   },
@@ -268,6 +352,9 @@ const SECTION = /\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g
 
 export function renderTemplate(text: string, vars: Vars) {
   const get = (name: string) => String(vars[name] ?? "")
+  // Saved prompts predate {{category_context}}, so for non-moving clients put it first unless the prompt places it itself
+  const context = get("category_context").trim()
+  if (context && !/\{\{#?category_context\}\}/.test(text)) text = `${context}\n\n${text}`
   return text
     .replace(SECTION, (_, name: string, inner: string) => (get(name).trim() ? inner : ""))
     .replace(/\{\{(\w+)\}\}/g, (_, name: string) => get(name))

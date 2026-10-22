@@ -34,3 +34,258 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+```
+web_app
+├─ AGENTS.md
+├─ app
+│  ├─ ads
+│  │  ├─ facebook
+│  │  │  └─ page.tsx
+│  │  └─ page.tsx
+│  ├─ api
+│  │  ├─ ads
+│  │  │  ├─ facebook
+│  │  │  │  └─ route.ts
+│  │  │  └─ [id]
+│  │  │     └─ route.ts
+│  │  ├─ content
+│  │  │  ├─ blog
+│  │  │  │  └─ route.ts
+│  │  │  ├─ faq
+│  │  │  │  └─ route.ts
+│  │  │  ├─ gbp
+│  │  │  │  └─ route.ts
+│  │  │  ├─ meta
+│  │  │  │  └─ route.ts
+│  │  │  └─ [id]
+│  │  │     └─ route.ts
+│  │  ├─ gbp-posts
+│  │  │  ├─ approve
+│  │  │  │  └─ route.ts
+│  │  │  ├─ export
+│  │  │  │  └─ route.ts
+│  │  │  ├─ generate
+│  │  │  │  └─ route.ts
+│  │  │  ├─ jobs
+│  │  │  │  └─ [jobId]
+│  │  │  │     └─ route.ts
+│  │  │  └─ [id]
+│  │  │     ├─ regenerate
+│  │  │     │  └─ route.ts
+│  │  │     └─ route.ts
+│  │  ├─ humanizer
+│  │  │  ├─ approve
+│  │  │  │  └─ route.ts
+│  │  │  ├─ content
+│  │  │  │  └─ route.ts
+│  │  │  ├─ items
+│  │  │  │  └─ route.ts
+│  │  │  ├─ process
+│  │  │  │  └─ route.ts
+│  │  │  └─ save
+│  │  │     └─ route.ts
+│  │  ├─ reports
+│  │  │  └─ generate
+│  │  │     └─ route.ts
+│  │  ├─ seo
+│  │  │  ├─ audit
+│  │  │  │  ├─ route.ts
+│  │  │  │  └─ [jobId]
+│  │  │  │     └─ route.ts
+│  │  │  └─ export
+│  │  │     └─ route.ts
+│  │  └─ settings
+│  │     ├─ api-keys
+│  │     │  ├─ route.ts
+│  │     │  └─ test
+│  │     │     └─ route.ts
+│  │     └─ prompts
+│  │        └─ [name]
+│  │           ├─ reset
+│  │           │  └─ route.ts
+│  │           ├─ route.ts
+│  │           └─ test
+│  │              └─ route.ts
+│  ├─ clients
+│  │  ├─ export
+│  │  │  └─ route.ts
+│  │  ├─ new
+│  │  │  └─ page.tsx
+│  │  ├─ page.tsx
+│  │  └─ [id]
+│  │     ├─ edit
+│  │     │  └─ page.tsx
+│  │     └─ page.tsx
+│  ├─ content
+│  │  └─ page.tsx
+│  ├─ favicon.ico
+│  ├─ gbp-posts
+│  │  └─ page.tsx
+│  ├─ globals.css
+│  ├─ humanizer
+│  │  └─ page.tsx
+│  ├─ layout.tsx
+│  ├─ page.tsx
+│  ├─ reports
+│  │  └─ page.tsx
+│  ├─ seo
+│  │  └─ page.tsx
+│  └─ settings
+│     └─ page.tsx
+├─ components
+│  ├─ ads
+│  │  ├─ facebook-panel.tsx
+│  │  ├─ parts.tsx
+│  │  ├─ use-ads-generator.ts
+│  │  └─ workspace.tsx
+│  ├─ breadcrumb.tsx
+│  ├─ client-avatar.tsx
+│  ├─ client-form.tsx
+│  ├─ client-selector.tsx
+│  ├─ clients
+│  │  └─ setup-progress.tsx
+│  ├─ clients-filters.tsx
+│  ├─ coming-soon.tsx
+│  ├─ content
+│  │  ├─ blog-panel.tsx
+│  │  ├─ faq-panel.tsx
+│  │  ├─ gbp-panel.tsx
+│  │  ├─ markdown.tsx
+│  │  ├─ meta-panel.tsx
+│  │  ├─ parts.tsx
+│  │  ├─ use-generator.ts
+│  │  └─ workspace.tsx
+│  ├─ copy-button.tsx
+│  ├─ delete-client-dialog.tsx
+│  ├─ empty-state.tsx
+│  ├─ gbp
+│  │  ├─ calendar-workspace.tsx
+│  │  ├─ generate-wizard.tsx
+│  │  └─ post-detail.tsx
+│  ├─ history-item.tsx
+│  ├─ humanizer
+│  │  ├─ batch-mode.tsx
+│  │  ├─ parts.tsx
+│  │  ├─ paste-mode.tsx
+│  │  └─ workspace.tsx
+│  ├─ reports
+│  │  └─ workspace.tsx
+│  ├─ seo
+│  │  ├─ audit-runner.tsx
+│  │  ├─ findings-list.tsx
+│  │  ├─ report-view.tsx
+│  │  ├─ score-ring.tsx
+│  │  └─ start-audit-button.tsx
+│  ├─ settings
+│  │  ├─ api-keys-tab.tsx
+│  │  ├─ general-tab.tsx
+│  │  ├─ prompts-tab.tsx
+│  │  └─ workspace.tsx
+│  ├─ sidebar.tsx
+│  ├─ skeletons.tsx
+│  ├─ theme-toggle.tsx
+│  ├─ topbar.tsx
+│  └─ ui
+│     ├─ alert-dialog.tsx
+│     ├─ badge.tsx
+│     ├─ button.tsx
+│     ├─ card.tsx
+│     ├─ dialog.tsx
+│     ├─ input.tsx
+│     ├─ popover.tsx
+│     └─ sonner.tsx
+├─ components.json
+├─ eslint.config.mjs
+├─ lib
+│  ├─ actions.ts
+│  ├─ activity.ts
+│  ├─ ads-api.ts
+│  ├─ ads-types.ts
+│  ├─ audit
+│  │  ├─ browser.ts
+│  │  ├─ checks
+│  │  │  ├─ crawlhealth.ts
+│  │  │  ├─ geo.ts
+│  │  │  ├─ index.ts
+│  │  │  ├─ links.ts
+│  │  │  ├─ local.ts
+│  │  │  ├─ multilingual.ts
+│  │  │  ├─ onpage.ts
+│  │  │  ├─ performance.ts
+│  │  │  ├─ social.ts
+│  │  │  ├─ technology.ts
+│  │  │  ├─ usability.ts
+│  │  │  └─ util.ts
+│  │  ├─ config.ts
+│  │  ├─ crawl-types.ts
+│  │  ├─ crawler.ts
+│  │  ├─ crux.ts
+│  │  ├─ engine.ts
+│  │  ├─ extract.ts
+│  │  ├─ groups.ts
+│  │  ├─ imageinfo.ts
+│  │  ├─ jobs.ts
+│  │  ├─ lighthouse.ts
+│  │  ├─ net.ts
+│  │  ├─ phones.ts
+│  │  ├─ report.ts
+│  │  ├─ robots.ts
+│  │  ├─ site-probes.ts
+│  │  ├─ text.ts
+│  │  └─ types.ts
+│  ├─ client-schema.ts
+│  ├─ clients.ts
+│  ├─ constants.ts
+│  ├─ content-api.ts
+│  ├─ content-types.ts
+│  ├─ dashboard.ts
+│  ├─ db.ts
+│  ├─ diff.ts
+│  ├─ download.ts
+│  ├─ env-file.ts
+│  ├─ format.ts
+│  ├─ gbp-jobs.ts
+│  ├─ gbp-posts-api.ts
+│  ├─ gbp-posts-types.ts
+│  ├─ gbp-posts.ts
+│  ├─ gemini.ts
+│  ├─ generators
+│  │  ├─ ads.ts
+│  │  ├─ content.ts
+│  │  ├─ gbp-posts.ts
+│  │  ├─ humanizer.ts
+│  │  └─ reports.ts
+│  ├─ humanizer-patterns.ts
+│  ├─ humanizer-store.ts
+│  ├─ humanizer-types.ts
+│  ├─ onboarding.ts
+│  ├─ prompts
+│  │  ├─ fb-examples.ts
+│  │  ├─ gbp-examples.ts
+│  │  ├─ humanizer.ts
+│  │  ├─ report.ts
+│  │  ├─ sample-run.ts
+│  │  ├─ shared.ts
+│  │  ├─ store.ts
+│  │  └─ templates.ts
+│  ├─ reports-types.ts
+│  └─ utils.ts
+├─ next.config.ts
+├─ package.json
+├─ PLAN.md.md
+├─ pnpm-lock.yaml
+├─ pnpm-workspace.yaml
+├─ prisma
+│  └─ schema.prisma
+├─ prisma.config.ts
+├─ public
+│  ├─ file.svg
+│  ├─ globe.svg
+│  ├─ next.svg
+│  ├─ vercel.svg
+│  └─ window.svg
+├─ README.md
+└─ tsconfig.json
+
+```

@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { formatPhone } from "@/lib/client-schema"
 import { getClient } from "@/lib/clients"
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
+import { getConnectionSummary } from "@/lib/gbp-api"
 import { getActiveGbpJob } from "@/lib/gbp-jobs"
 import { listPostsForMonth, listWizardClients } from "@/lib/gbp-posts"
 import { dateKey, isMonthKey } from "@/lib/gbp-posts-types"
@@ -51,11 +52,11 @@ async function ActiveClientPosts({ searchParams }: { searchParams: PageProps<"/g
     )
   }
 
-  const [posts, wizardClients] = await Promise.all([listPostsForMonth(client.id, month), listWizardClients()])
+  const [posts, wizardClients, gbp] = await Promise.all([listPostsForMonth(client.id, month), listWizardClients(), getConnectionSummary(client.id)])
   return (
     <CalendarWorkspace
       key={`${client.id}-${month}`}
-      client={{ id: client.id, name: client.name, emirate: client.emirate, phone: formatPhone(client.phone), primaryColor: client.primaryColor }}
+      client={{ id: client.id, name: client.name, emirate: client.emirate, phone: formatPhone(client.phone), primaryColor: client.primaryColor, gbpLocation: gbp.connected ? gbp.locationName : null }}
       month={month}
       today={today}
       posts={posts}

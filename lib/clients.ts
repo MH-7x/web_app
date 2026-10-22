@@ -1,5 +1,5 @@
 import { asRecord, asStringArray } from "@/lib/client-schema"
-import { PAGE_SIZE } from "@/lib/constants"
+import { DEFAULT_CATEGORY, PAGE_SIZE, isCategory, type ClientCategory } from "@/lib/constants"
 import { db } from "@/lib/db"
 import type { Prisma } from "@/lib/generated/prisma/client"
 
@@ -8,6 +8,7 @@ export type ClientListItem = {
   name: string
   nameAr: string
   slug: string
+  category: ClientCategory
   emirate: string
   servicesCount: number
   website: string | null
@@ -15,12 +16,13 @@ export type ClientListItem = {
   lastActivity: Date
 }
 
-export type ClientFilters = { q?: string; emirate?: string }
+export type ClientFilters = { q?: string; emirate?: string; category?: string }
 
-function whereFor({ q, emirate }: ClientFilters): Prisma.ClientWhereInput {
+function whereFor({ q, emirate, category }: ClientFilters): Prisma.ClientWhereInput {
   const term = q?.trim()
   return {
     ...(emirate ? { emirate } : {}),
+    ...(isCategory(category) ? { category } : {}),
     ...(term
       ? {
           OR: [
@@ -55,6 +57,7 @@ export async function listClients(filters: ClientFilters, page: number) {
     name: c.name,
     nameAr: c.nameAr,
     slug: c.slug,
+    category: isCategory(c.category) ? c.category : DEFAULT_CATEGORY,
     emirate: c.emirate,
     servicesCount: asStringArray(c.services).length,
     website: c.website,
@@ -82,7 +85,8 @@ export async function getClientOptions() {
 }
 
 export async function getClient(id: string) {
-  const client = await db.client.findUnique({ where: { id } })
+  // the OAuth credentials column is never needed by the app, so keep it out of every client object
+  const client = await db.client.findUnique({ where: { id }, omit: { apiCredentials: true } })
   if (!client) return null
   const brandSpecs = asRecord(client.brandSpecs)
   const brandColors = asRecord(client.brandColors)
@@ -91,6 +95,7 @@ export async function getClient(id: string) {
     name: client.name,
     nameAr: client.nameAr,
     slug: client.slug,
+    category: (isCategory(client.category) ? client.category : DEFAULT_CATEGORY) as ClientCategory,
     emirate: client.emirate,
     emiratesServed: asStringArray(client.emiratesServed),
     areas: asStringArray(client.areas),
@@ -118,7 +123,7 @@ export type ClientDetail = NonNullable<Awaited<ReturnType<typeof getClient>>>
 export async function getClientContentStats(clientId: string) {
   const [byType, recent, total] = await Promise.all([
     db.generatedContent.groupBy({ by: ["type"], where: { clientId }, _count: { _all: true } }),
-    db.generatedContent.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 5 }),
+    db.generatedContent.findMany({ where: { clientId }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, type: true, content: true, createdAt: true } }),
     db.generatedContent.count({ where: { clientId } }),
   ])
   return {
@@ -138,5 +143,6 @@ export async function listClientContent(clientId: string, opts: { type?: string;
     },
     orderBy: { createdAt: "desc" },
     take: 100,
+    select: { id: true, type: true, subtype: true, language: true, content: true, contentAr: true, humanized: true, createdAt: true, metadata: true },
   })
 }

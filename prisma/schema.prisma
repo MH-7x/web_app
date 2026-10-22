@@ -12,6 +12,7 @@ model Client {
   name           String // English name
   nameAr         String // Arabic name
   slug           String             @unique // URL-safe ID ("al-afnan")
+  category       String             @default("moving") // moving, used_furniture, pickup_rental
   emirate        String // Dubai, Sharjah, RAK, etc. (where the company is based)
   emiratesServed Json               @default("[]") // other emirates served, e.g. ["Ajman", "Abu Dhabi"]
   areas          Json // ["Al Nahda", "Al Majaz"]
@@ -71,6 +72,10 @@ model GBPPost {
   keywords      Json? // ["Sharjah movers", ...]
   imagePrompt   String?
   status        String   @default("draft") // draft, approved, published
+  publishedAt   DateTime? // when it went live on Google
+  gbpPostId     String? // the Google local post name returned on publish
+  scheduledFor  DateTime? // planned publish time; published by hand for now
+  imageUrl      String   @default("") // public https URL of the photo to attach
   createdAt     DateTime @default(now())
 
   @@index([clientId, scheduledDate])
@@ -87,4 +92,18 @@ model Audit {
   createdAt       DateTime @default(now())
 
   @@index([clientId, createdAt])
+}
+
+model GBPConnection {
+  id              String   @id @default(cuid())
+  clientId        String   @unique
+  googleAccountId String
+  locationId      String
+  locationName    String   @default("")
+  accessToken     String
+  refreshToken    String
+  tokenExpiry     DateTime
+  connected       Boolean  @default(true)
+  connectedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

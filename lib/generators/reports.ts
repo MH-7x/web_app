@@ -1,8 +1,11 @@
 import { SchemaType, type ResponseSchema } from "@google/generative-ai"
 
 import type { ClientDetail } from "@/lib/clients"
+import { CATEGORY_INFO } from "@/lib/constants"
 import { GeminiError, generateJSON } from "@/lib/gemini"
+import { categoryContext } from "@/lib/prompts/shared"
 import { loadTemplate } from "@/lib/prompts/store"
+import { getCategoryFallbackServices } from "@/lib/prompts/templates"
 import { buildStats, type Metrics, type Month, type Report, type Stat } from "@/lib/reports-types"
 
 const LIST = { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } } as const
@@ -30,7 +33,8 @@ export async function generateReport(client: ClientDetail, month: Month, metrics
   if (!stats.length) throw new GeminiError("bad_response", "There are no figures to report on.", 400)
 
   const prompt = `Client: ${client.name} (${client.emirate}, UAE)
-Services: ${client.services.join(", ") || "moving services"}
+Business type: ${CATEGORY_INFO[client.category].label}
+Services: ${client.services.join(", ") || getCategoryFallbackServices(client.category)}
 Areas served: ${client.areas.join(", ") || client.emirate}
 Report month: ${month.label}
 Next month: ${month.nextLabel}
@@ -41,7 +45,7 @@ ${describe(stats, month.previousLabel)}
 
 Write the report.`
 
-  const out = await generateJSON<Partial<Report>>(prompt, SCHEMA, { systemInstruction: (await loadTemplate("report")).render({}), temperature: 0.5 })
+  const out = await generateJSON<Partial<Report>>(prompt, SCHEMA, { systemInstruction: (await loadTemplate("report")).render({ category_context: categoryContext(client) }), temperature: 0.5 })
   const list = (v: unknown) => (Array.isArray(v) ? v.filter((i): i is string => typeof i === "string" && i.trim() !== "").map((i) => i.trim()) : [])
   const report: Report = { summary: typeof out.summary === "string" ? out.summary.trim() : "", wins: list(out.wins), improvements: list(out.improvements), recommendations: list(out.recommendations) }
   if (!report.summary || !report.recommendations.length) throw new GeminiError("bad_response", "Gemini returned an incomplete report. Try again.", 502, true)

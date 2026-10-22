@@ -2,11 +2,19 @@ import ExcelJS from "exceljs"
 
 import { getClient } from "@/lib/clients"
 import { listPostsForMonth } from "@/lib/gbp-posts"
-import { fail } from "@/lib/gbp-posts-api"
+import { fail, handleError } from "@/lib/gbp-posts-api"
 import { CTAS, POST_TYPES, isMonthKey, monthLabel } from "@/lib/gbp-posts-types"
 
 /** XLSX of the month's approved posts: Date, Text AR, Text EN, Post Type, CTA, Image Prompt. */
 export async function GET(request: Request) {
+  try {
+    return await exportMonth(request)
+  } catch (error) {
+    return handleError(error, "gbp-posts/export")
+  }
+}
+
+async function exportMonth(request: Request) {
   const { searchParams } = new URL(request.url)
   const clientId = searchParams.get("clientId") ?? ""
   const month = searchParams.get("month") ?? ""

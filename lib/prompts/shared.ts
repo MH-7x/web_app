@@ -1,11 +1,15 @@
 import type { ClientDetail } from "@/lib/clients"
+import { CATEGORY_INFO } from "@/lib/constants"
+import { getCategoryContext, getCategoryFallbackServices } from "@/lib/prompts/templates"
 
 /** Prompt pieces shared by the content and ads generators. */
 
 export type Lang = "en" | "ar"
 
 export const tone = (client: ClientDetail) => client.tones.join(", ").toLowerCase() || "professional, trustworthy"
-export const services = (client: ClientDetail) => client.services.join(", ") || "residential and commercial moving"
+export const services = (client: ClientDetail) => client.services.join(", ") || getCategoryFallbackServices(client.category)
+/** Business-category section for the system prompt; empty for moving companies. */
+export const categoryContext = (client: Pick<ClientDetail, "category">) => getCategoryContext(client.category)
 export const areas = (client: ClientDetail) => client.areas.join(", ") || `all areas of ${client.emirate}`
 
 export const LANGUAGE_RULE: Record<Lang, string> = {
@@ -17,6 +21,7 @@ export const LANGUAGE_RULE: Record<Lang, string> = {
 export function clientBrief(client: ClientDetail) {
   const lines = [
     `Company: ${client.name} (${client.nameAr})`,
+    client.category !== "moving" && `Business type: ${CATEGORY_INFO[client.category].label}`,
     `Primary emirate: ${client.emirate}`,
     `Services: ${services(client)}`,
     `Areas served: ${areas(client)}`,

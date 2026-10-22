@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Loader2, MapPin, Palette, Pencil, Phone, RefreshCw, Trash2, Undo2, X } from "lucide-react"
+import { Check, CheckCircle2, Clock, Loader2, MapPin, Palette, Pencil, Phone, RefreshCw, Trash2, Undo2, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -10,14 +10,15 @@ import { CopyButton } from "@/components/copy-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Label, Select, Textarea } from "@/components/ui/input"
-import { CTAS, GBP_POST_MAX, POST_TYPES, categoryLabel, longDayLabel, type PostDTO } from "@/lib/gbp-posts-types"
+import { Input, Label, Select, Textarea } from "@/components/ui/input"
+import { PublishNowButton, ScheduleButton } from "@/components/gbp/publish-actions"
+import { CTAS, GBP_POST_MAX, POST_TYPES, categoryLabel, longDayLabel, scheduleLabel, type PostDTO } from "@/lib/gbp-posts-types"
 import { cn } from "@/lib/utils"
 
 export const STATUS_STYLE: Record<string, { dot: string; badge: "success" | "default" | "muted"; label: string }> = {
-  approved: { dot: "bg-emerald-500", badge: "success", label: "Approved" },
+  approved: { dot: "bg-sky-500", badge: "success", label: "Approved" },
   draft: { dot: "bg-amber-500", badge: "muted", label: "Draft" },
-  published: { dot: "bg-primary", badge: "default", label: "Published" },
+  published: { dot: "bg-emerald-600", badge: "default", label: "Published" },
 }
 
 export function PostDetail({
@@ -25,20 +26,25 @@ export function PostDetail({
   clientName,
   phone,
   brandColor,
+  gbpLocation,
   onDeleted,
 }: {
   post: PostDTO
   clientName: string
   phone: string
   brandColor: string | null
+  /** the connected listing's name, or null when the client has no Google Business Profile connection */
+  gbpLocation: string | null
   onDeleted: () => void
 }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState({ textAr: post.textAr, textEn: post.textEn, imagePrompt: post.imagePrompt, cta: post.cta })
+  const [draft, setDraft] = useState({ textAr: post.textAr, textEn: post.textEn, imagePrompt: post.imagePrompt, cta: post.cta, imageUrl: post.imageUrl })
   const [busy, setBusy] = useState<null | "save" | "approve" | "regenerate" | "delete">(null)
   const [error, setError] = useState<string | null>(null)
   const status = STATUS_STYLE[post.status] ?? STATUS_STYLE.draft
+  // once it is live on Google it can't be edited, regenerated or pulled back to draft from here
+  const published = post.status === "published"
 
   async function call(kind: NonNullable<typeof busy>, url: string, init: RequestInit, after?: () => void) {
     setBusy(kind)
@@ -64,7 +70,7 @@ export function PostDetail({
   const hasEn = post.language !== "ar"
   const over = (hasAr && draft.textAr.length > GBP_POST_MAX) || (hasEn && draft.textEn.length > GBP_POST_MAX)
   // only send the languages this post actually has; the other one is empty on purpose
-  const editBody = () => ({ ...(hasAr ? { textAr: draft.textAr } : {}), ...(hasEn ? { textEn: draft.textEn } : {}), imagePrompt: draft.imagePrompt, cta: draft.cta })
+  const editBody = () => ({ ...(hasAr ? { textAr: draft.textAr } : {}), ...(hasEn ? { textEn: draft.textEn } : {}), imagePrompt: draft.imagePrompt, cta: draft.cta, imageUrl: draft.imageUrl })
 
   return (
     <Card className="space-y-5 p-6">
@@ -84,7 +90,7 @@ export function PostDetail({
         <div className="flex flex-wrap gap-2">
           {editing ? (
             <>
-              <Button variant="outline" onClick={() => { setEditing(false); setDraft({ textAr: post.textAr, textEn: post.textEn, imagePrompt: post.imagePrompt, cta: post.cta }); setError(null) }} disabled={busy !== null}>
+              <Button variant="outline" onClick={() => { setEditing(false); setDraft({ textAr: post.textAr, textEn: post.textEn, imagePrompt: post.imagePrompt, cta: post.cta, imageUrl: post.imageUrl }); setError(null) }} disabled={busy !== null}>
                 <X /> Cancel
               </Button>
               <Button disabled={busy !== null || over} onClick={() => patch(editBody(), () => setEditing(false))}>
@@ -93,12 +99,12 @@ export function PostDetail({
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => { setDraft({ textAr: post.textAr, textEn: post.textEn, imagePrompt: post.imagePrompt, cta: post.cta }); setEditing(true) }} disabled={busy !== null}>
+              <Button variant="outline" onClick={() => { setDraft({ textAr: post.textAr, textEn: post.textEn, imagePrompt: post.imagePrompt, cta: post.cta, imageUrl: post.imageUrl }); setEditing(true) }} disabled={busy !== null || published}>
                 <Pencil /> Edit Text
               </Button>
               <Button
                 variant="outline"
-                disabled={busy !== null}
+                disabled={busy !== null || published}
                 onClick={() => {
                   if (window.confirm("Replace this post with a new version? Your edits to it will be lost and it goes back to draft.")) void call("regenerate", `/api/gbp-posts/${post.id}/regenerate`, { method: "POST" })
                 }}
@@ -109,10 +115,16 @@ export function PostDetail({
                 <Button disabled={busy !== null} onClick={() => patch({ status: "approved" })}>
                   {busy === "save" ? <Loader2 className="animate-spin" /> : <Check />} Approve Post
                 </Button>
-              ) : (
+              ) : published ? null : (
                 <Button variant="secondary" disabled={busy !== null} onClick={() => patch({ status: "draft" })}>
                   <Undo2 /> Back to draft
                 </Button>
+              )}
+              {gbpLocation !== null && !published && (
+                <>
+                  <PublishNowButton post={post} locationName={gbpLocation} disabled={busy !== null} />
+                  <ScheduleButton post={post} disabled={busy !== null} />
+                </>
               )}
               <Button
                 variant="destructive"
@@ -131,6 +143,18 @@ export function PostDetail({
       </div>
 
       {error && <ErrorNote message={error} />}
+
+      {published && post.publishedAt ? (
+        <p className="flex items-center gap-2 rounded-lg bg-emerald-600/10 px-4 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="size-4" /> Published to Google Business Profile on {scheduleLabel(post.publishedAt)}.
+        </p>
+      ) : (
+        post.scheduledFor && (
+          <p className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300">
+            <Clock className="size-4" /> Scheduled for {scheduleLabel(post.scheduledFor)}.{gbpLocation !== null ? " Press Publish Now when the time comes." : ""}
+          </p>
+        )
+      )}
 
       <div className={cn("grid gap-4", hasAr && hasEn && "xl:grid-cols-2")}>
         {hasAr && <VersionCard lang="ar" primary={hasEn} editing={editing} text={editing ? draft.textAr : post.textAr} keywords={post.keywords} onChange={(v) => setDraft((d) => ({ ...d, textAr: v }))} />}
@@ -180,6 +204,18 @@ export function PostDetail({
             <Textarea aria-label="Image prompt" value={draft.imagePrompt} onChange={(e) => setDraft((d) => ({ ...d, imagePrompt: e.target.value }))} className="field-sizing-content min-h-24" />
           ) : (
             <p className="rounded-lg bg-background p-3 text-sm text-muted-foreground italic">{post.imagePrompt || "No image prompt."}</p>
+          )}
+          {gbpLocation !== null && (
+            <div className="space-y-1.5">
+              <Label htmlFor="post-image-url" className="text-xs">
+                Photo URL for Google (optional, public https link)
+              </Label>
+              {editing ? (
+                <Input id="post-image-url" type="url" inputMode="url" placeholder="https://…" value={draft.imageUrl} onChange={(e) => setDraft((d) => ({ ...d, imageUrl: e.target.value }))} />
+              ) : (
+                <p className="truncate rounded-lg bg-background p-2 font-mono text-xs text-muted-foreground">{post.imageUrl || "No photo. The post goes out as text only."}</p>
+              )}
+            </div>
           )}
           <div className="flex flex-wrap gap-2 font-mono text-xs">
             <span className="rounded bg-background px-2 py-1">Aspect: 4:3 (GBP optimal)</span>

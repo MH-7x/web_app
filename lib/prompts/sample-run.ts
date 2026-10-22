@@ -16,6 +16,7 @@ export const SAMPLE_CLIENT: ClientDetail = {
   name: "Al Noor Movers",
   nameAr: "النور لنقل الأثاث",
   slug: "al-noor-movers",
+  category: "moving",
   emirate: "Sharjah",
   emiratesServed: ["Dubai", "Ajman"],
   areas: ["Al Majaz", "Al Nahda", "Muwaileh"],

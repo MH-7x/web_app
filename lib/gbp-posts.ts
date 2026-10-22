@@ -16,6 +16,10 @@ export function toPostDTO(row: GBPPost): PostDTO {
     textEn: row.textEn,
     keywords: asStringArray(row.keywords),
     imagePrompt: row.imagePrompt ?? "",
+    imageUrl: row.imageUrl,
+    scheduledFor: row.scheduledFor?.toISOString() ?? null,
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    gbpPostId: row.gbpPostId,
   }
 }
 

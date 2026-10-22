@@ -1,12 +1,20 @@
 import { reportHtml, reportMarkdown, type ReportInput } from "@/lib/audit/report"
 import type { AuditPayloadV2, AuditScoresV2, RecommendationV2 } from "@/lib/audit/types"
 import { db } from "@/lib/db"
-import { fail } from "@/lib/gbp-posts-api"
+import { fail, handleError } from "@/lib/gbp-posts-api"
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "audit"
 
 /** Download a saved audit as JSON (everything), Markdown or a self-contained HTML report. */
 export async function GET(request: Request) {
+  try {
+    return await exportAudit(request)
+  } catch (error) {
+    return handleError(error, "seo/export")
+  }
+}
+
+async function exportAudit(request: Request) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get("audit") ?? ""
   const format = searchParams.get("format") ?? "json"

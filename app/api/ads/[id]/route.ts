@@ -28,13 +28,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Languages cannot be added to a saved item." }, { status: 400 })
   }
 
-  await db.generatedContent.update({
-    where: { id },
-    data: {
-      ...adsColumns(result),
-      metadata: { ...asObject(row.metadata), result, edited: true } as unknown as Prisma.InputJsonValue,
-      humanized: false,
-    },
-  })
-  return NextResponse.json({ id, savedAt: new Date().toISOString() })
+  try {
+    await db.generatedContent.update({
+      where: { id },
+      data: {
+        ...adsColumns(result),
+        metadata: { ...asObject(row.metadata), result, edited: true } as unknown as Prisma.InputJsonValue,
+        humanized: false,
+      },
+    })
+    return NextResponse.json({ id, savedAt: new Date().toISOString() })
+  } catch (error) {
+    console.error("[ads/put]", error)
+    return NextResponse.json({ error: "Could not save your changes. The item may have been deleted." }, { status: 500 })
+  }
 }

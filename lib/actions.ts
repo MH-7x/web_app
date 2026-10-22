@@ -13,7 +13,7 @@ import {
   type ClientInput,
   type FieldErrors,
 } from "@/lib/client-schema"
-import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
+import { ACTIVE_CLIENT_COOKIE, DEFAULT_CATEGORY, isCategory } from "@/lib/constants"
 import { db } from "@/lib/db"
 
 export type ActionResult = { ok: false; errors: FieldErrors; message?: string }
@@ -29,6 +29,7 @@ const strList = (v: unknown) =>
 function sanitize(raw: unknown): ClientInput {
   const r = asRecord(raw)
   return {
+    category: isCategory(r.category) ? r.category : DEFAULT_CATEGORY,
     name: str(r.name).trim(),
     nameAr: str(r.nameAr).trim(),
     emirate: str(r.emirate),
@@ -60,6 +61,7 @@ async function uniqueSlug(name: string, ignoreId?: string) {
 
 function toColumns(input: ClientInput) {
   return {
+    category: input.category,
     name: input.name,
     nameAr: input.nameAr,
     emirate: input.emirate,

@@ -45,19 +45,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const meta = { ...asObject(row.metadata) }
   delete meta.humanizer
 
-  const updated = await db.generatedContent.update({
-    where: { id },
-    data: {
-      ...toColumns(type, result),
-      metadata: {
-        ...meta,
-        result,
-        edited: true,
-        ...(humanized !== null && { humanizer: { units: Object.fromEntries(unitsOf(type, result).map((u) => [u.key, { score: humanized }])) } }),
-      } as unknown as Prisma.InputJsonValue,
-      humanized: humanized !== null,
-      score: humanized,
-    },
-  })
-  return NextResponse.json({ id: updated.id, savedAt: new Date().toISOString() })
+  try {
+    const updated = await db.generatedContent.update({
+      where: { id },
+      data: {
+        ...toColumns(type, result),
+        metadata: {
+          ...meta,
+          result,
+          edited: true,
+          ...(humanized !== null && { humanizer: { units: Object.fromEntries(unitsOf(type, result).map((u) => [u.key, { score: humanized }])) } }),
+        } as unknown as Prisma.InputJsonValue,
+        humanized: humanized !== null,
+        score: humanized,
+      },
+    })
+    return NextResponse.json({ id: updated.id, savedAt: new Date().toISOString() })
+  } catch (error) {
+    console.error("[content/put]", error)
+    return NextResponse.json({ error: "Could not save your changes. The item may have been deleted." }, { status: 500 })
+  }
 }

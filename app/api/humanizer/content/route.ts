@@ -17,8 +17,10 @@ export async function POST(request: Request) {
 
     let type: ContentType
     let result
+    let category: string | undefined
     if (typeof b.id === "string" && b.id) {
-      const row = await db.generatedContent.findUnique({ where: { id: b.id } })
+      const row = await db.generatedContent.findUnique({ where: { id: b.id }, include: { client: { select: { category: true } } } })
+      category = row?.client.category
       if (!row) return NextResponse.json({ error: "That item no longer exists." }, { status: 404 })
       const parsed = resultFromMetadata(row.type as ContentType, row.metadata)
       if (!parsed) throw new BadRequestError("That item cannot be humanized.")
@@ -26,9 +28,10 @@ export async function POST(request: Request) {
       result = parsed
     } else {
       ;({ type, result } = parseContentPayload(b.type, b.result))
+      if (typeof b.clientId === "string" && b.clientId) category = (await db.client.findUnique({ where: { id: b.clientId }, select: { category: true } }))?.category
     }
 
-    const out = await humanizeResult(type, result as never, strictness)
+    const out = await humanizeResult(type, result as never, strictness, category)
     return NextResponse.json({ type, result: out.result, units: out.units })
   } catch (error) {
     return handleError(error, "humanizer/content")

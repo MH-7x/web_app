@@ -7,6 +7,7 @@ import { fail, handleError } from "@/lib/gbp-posts-api"
 import { asStringArray } from "@/lib/client-schema"
 import { dateKey, POST_CATEGORIES, type PostCategory, type PostLanguage } from "@/lib/gbp-posts-types"
 import { regeneratePost } from "@/lib/generators/gbp-posts"
+import { getCategoryFallbackServices } from "@/lib/prompts/templates"
 
 /** New text and image prompt for one post; its day and angle stay. It goes back to draft. */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -14,6 +15,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const { id } = await params
     const row = await db.gBPPost.findUnique({ where: { id } })
     if (!row) return fail("That post no longer exists.", 404)
+    // rewriting a live post would drop it back to draft and lose its link to the Google post
+    if (row.status === "published") return fail("This post is already published on Google Business Profile.", 409)
     const client = await getClient(row.clientId)
     if (!client) return fail("That client no longer exists.", 404)
 
@@ -25,7 +28,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       {
         date: dateKey(row.scheduledDate),
         category,
-        service: client.services[index] ?? "moving services",
+        service: client.services[index] ?? getCategoryFallbackServices(client.category),
         area: client.areas[index % Math.max(1, client.areas.length)] ?? client.emirate,
         keywords: asStringArray(row.keywords),
       },

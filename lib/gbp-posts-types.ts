@@ -41,6 +41,21 @@ export type PostDTO = {
   textEn: string
   keywords: string[]
   imagePrompt: string
+  /** public https link of the photo sent to Google; empty for none */
+  imageUrl: string
+  /** ISO timestamps, or null */
+  scheduledFor: string | null
+  publishedAt: string | null
+  /** Google's id for the live post */
+  gbpPostId: string | null
+}
+
+/** "Oct 25 at 9:00 AM" in Dubai time. */
+export const scheduleLabel = (iso: string) => {
+  const d = new Date(iso)
+  const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Dubai" }).format(d)
+  const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Dubai" }).format(d)
+  return `${day} at ${time}`
 }
 
 /* ------------------------------------------------------------ dates */

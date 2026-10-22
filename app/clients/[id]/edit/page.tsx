@@ -34,6 +34,7 @@ async function EditForm({ params }: { params: PageProps<"/clients/[id]/edit">["p
   if (!client) notFound()
 
   const initial: ClientInput = {
+    category: client.category,
     name: client.name,
     nameAr: client.nameAr,
     emirate: client.emirate,

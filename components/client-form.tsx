@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, ArrowRight, Check, MapPin, Plus, X, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, MapPin, Plus, Sofa, Truck, X, Zap } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useId, useRef, useState, useTransition } from "react"
@@ -17,7 +17,7 @@ import {
   type ClientInput,
   type FieldErrors,
 } from "@/lib/client-schema"
-import { EMIRATES, INITIAL_SETUP_OPTIONS, SERVICES, TONES } from "@/lib/constants"
+import { CATEGORIES, CATEGORY_INFO, EMIRATES, INITIAL_SETUP_OPTIONS, SERVICES_BY_CATEGORY, TONES, type ClientCategory } from "@/lib/constants"
 import type { SetupClient, SetupStepId } from "@/lib/onboarding"
 import { cn } from "@/lib/utils"
 
@@ -299,6 +299,7 @@ function CompanyStep({
   setSameAsPhone,
 }: StepProps & { sameAsPhone: boolean; setSameAsPhone: (v: boolean) => void }) {
   const [areaDraft, setAreaDraft] = useState("")
+  const [serviceDraft, setServiceDraft] = useState("")
 
   function addArea() {
     const parts = areaDraft.split(",").map((a) => a.trim()).filter(Boolean)
@@ -307,10 +308,68 @@ function CompanyStep({
     setAreaDraft("")
   }
 
-  const allSelected = values.services.length === SERVICES.length
+  // values.services is the merged list: predefined checkboxes + custom tags. Anything not in the current category's
+  // list is custom, which also splits a saved client's services correctly when the edit form loads.
+  const serviceOptions = SERVICES_BY_CATEGORY[values.category]
+  const predefined: string[] = serviceOptions.map((s) => s.value)
+  const customServices = values.services.filter((s) => !predefined.includes(s))
+  const allSelected = predefined.every((v) => values.services.includes(v))
+
+  function changeCategory(next: ClientCategory) {
+    if (next === values.category) return
+    // the old category's predefined services no longer apply; custom ones stay
+    const old = SERVICES_BY_CATEGORY[values.category].map((s) => s.value as string)
+    set("category", next)
+    set("services", values.services.filter((s) => !old.includes(s)))
+  }
+
+  function addCustomService() {
+    const parts = serviceDraft.split(",").map((s) => s.trim()).filter(Boolean)
+    if (!parts.length) return
+    const lower = new Set(values.services.map((s) => s.toLowerCase()))
+    const fresh = parts.filter((p) => {
+      const key = p.toLowerCase()
+      if (lower.has(key)) return false
+      lower.add(key)
+      return true
+    })
+    if (fresh.length) set("services", [...values.services, ...fresh])
+    setServiceDraft("")
+  }
 
   return (
     <Section title="Company Identity & Coverage" description="Core registration details and operational footprint across the Emirates.">
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Business Category</legend>
+        <div role="radiogroup" aria-label="Business Category" className="grid gap-3 sm:grid-cols-3">
+          {CATEGORIES.map((c) => {
+            const on = values.category === c
+            const Icon = c === "used_furniture" ? Sofa : Truck
+            return (
+              <label
+                key={c}
+                className={cn(
+                  "flex cursor-pointer flex-col gap-2 rounded-xl bg-muted/60 p-4 ring-1 ring-transparent transition-colors hover:bg-muted has-focus-visible:ring-ring",
+                  on && "bg-primary/5 ring-2 ring-primary"
+                )}
+              >
+                <input type="radio" name="category" value={c} checked={on} onChange={() => changeCategory(c)} className="sr-only" />
+                <span className="flex items-center justify-between">
+                  <span className={cn("flex size-9 items-center justify-center rounded-lg", on ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground")}>
+                    <Icon className="size-5" />
+                  </span>
+                  {on && <Check className="size-4 text-primary" />}
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold">{CATEGORY_INFO[c].label}</span>
+                  <span className="block text-xs text-muted-foreground">{CATEGORY_INFO[c].hint}</span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+      </fieldset>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Company Name (English)" required error={errors.name} hint="Official trade license name in Latin script.">
           {(p) => <Input {...p} value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Al Afnan Furniture Transfer" autoComplete="organization" />}
@@ -454,14 +513,14 @@ function CompanyStep({
           </legend>
           <button
             type="button"
-            onClick={() => set("services", allSelected ? [] : SERVICES.map((s) => s.value))}
+            onClick={() => set("services", allSelected ? customServices : [...predefined, ...customServices])}
             className="text-sm text-primary hover:underline"
           >
             {allSelected ? "Clear all" : "Select all"}
           </button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((s) => {
+          {serviceOptions.map((s) => {
             const checked = values.services.includes(s.value)
             return (
               <label
@@ -484,6 +543,42 @@ function CompanyStep({
               </label>
             )
           })}
+        </div>
+        <div className="space-y-2 rounded-lg bg-muted/60 p-3">
+          <div className="flex gap-2">
+            <Input
+              aria-label="Add a custom service"
+              value={serviceDraft}
+              onChange={(e) => setServiceDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  addCustomService()
+                }
+              }}
+              placeholder="e.g. Curtain installation, TV mounting..."
+            />
+            <Button type="button" onClick={addCustomService} size="lg">
+              <Plus /> Add
+            </Button>
+          </div>
+          {customServices.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {customServices.map((service) => (
+                <li key={service} className="flex items-center gap-1.5 rounded-full bg-background py-1 pr-1 pl-3 text-sm ring-1 ring-foreground/10">
+                  {service}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${service}`}
+                    onClick={() => set("services", values.services.filter((s) => s !== service))}
+                    className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         {errors.services && (
           <p id="services-error" role="alert" className="text-xs text-destructive">

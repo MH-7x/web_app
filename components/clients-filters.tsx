@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 
 import { buttonVariants } from "@/components/ui/button"
 import { Select } from "@/components/ui/input"
-import { EMIRATES } from "@/lib/constants"
+import { CATEGORIES, CATEGORY_INFO, EMIRATES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 
 export function ClientsFilters({ emirateCounts }: { emirateCounts: Record<string, number> }) {
@@ -15,13 +15,14 @@ export function ClientsFilters({ emirateCounts }: { emirateCounts: Record<string
   const params = useSearchParams()
   const urlQuery = params.get("q") ?? ""
   const emirate = params.get("emirate") ?? ""
+  const category = params.get("category") ?? ""
 
   const [query, setQuery] = useState(urlQuery)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  function push(next: { q?: string; emirate?: string }) {
+  function push(next: { q?: string; emirate?: string; category?: string }) {
     const sp = new URLSearchParams(params.toString())
     for (const [key, value] of Object.entries(next)) {
       if (value) sp.set(key, value)
@@ -36,6 +37,7 @@ export function ClientsFilters({ emirateCounts }: { emirateCounts: Record<string
   const exportQs = new URLSearchParams()
   if (urlQuery) exportQs.set("q", urlQuery)
   if (emirate) exportQs.set("emirate", emirate)
+  if (category) exportQs.set("category", category)
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
@@ -49,7 +51,7 @@ export function ClientsFilters({ emirateCounts }: { emirateCounts: Record<string
             clearTimeout(timer.current)
             timer.current = setTimeout(() => push({ q: value.trim() }), 300)
           }}
-          placeholder="Search moving companies, emirates, domain…"
+          placeholder="Search clients, emirates, domain…"
           aria-label="Search clients"
           className="h-9 w-full rounded-lg bg-muted pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
         />
@@ -72,6 +74,17 @@ export function ClientsFilters({ emirateCounts }: { emirateCounts: Record<string
         </Select>
       </div>
 
+      <div className="w-44">
+        <Select value={category} onChange={(e) => push({ category: e.target.value })} aria-label="Filter by category" className="bg-muted">
+          <option value="">All Categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {CATEGORY_INFO[c].short}
+            </option>
+          ))}
+        </Select>
+      </div>
+
       <div className="ml-auto flex items-center gap-1">
         <span className="px-2 text-xs text-muted-foreground max-md:hidden">Sorted by recent</span>
         <button
@@ -81,7 +94,7 @@ export function ClientsFilters({ emirateCounts }: { emirateCounts: Record<string
             setQuery("")
             router.replace(pathname)
           }}
-          disabled={!urlQuery && !emirate && !query}
+          disabled={!urlQuery && !emirate && !category && !query}
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
         >
           <RotateCcw /> Reset

@@ -12,12 +12,14 @@ export async function GET(request: Request) {
   const clients = await listAllClients({
     q: searchParams.get("q") ?? undefined,
     emirate: searchParams.get("emirate") ?? undefined,
+    category: searchParams.get("category") ?? undefined,
   })
 
-  const header = ["Name", "Name (Arabic)", "Emirate", "Other Emirates Served", "Areas", "Services", "Phone", "WhatsApp", "Website", "Created"]
+  const header = ["Name", "Name (Arabic)", "Category", "Emirate", "Other Emirates Served", "Areas", "Services", "Phone", "WhatsApp", "Website", "Created"]
   const rows = clients.map((c) => [
     c.name,
     c.nameAr,
+    c.category,
     c.emirate,
     asStringArray(c.emiratesServed).join("; "),
     asStringArray(c.areas).join("; "),

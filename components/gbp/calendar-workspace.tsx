@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, Download, Loader2, Sparkles } from "lucide-react"
+import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, Clock, Download, Loader2, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -14,10 +14,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { GbpJobSnapshot } from "@/lib/gbp-jobs"
-import { POST_TYPES, addDays, categoryLabel, longDayLabel, monthGrid, monthLabel, shiftMonth, type PostDTO } from "@/lib/gbp-posts-types"
+import { POST_TYPES, addDays, categoryLabel, longDayLabel, monthGrid, monthLabel, scheduleLabel, shiftMonth, type PostDTO } from "@/lib/gbp-posts-types"
 import { cn } from "@/lib/utils"
 
-export type GbpClient = { id: string; name: string; emirate: string; phone: string; primaryColor: string | null }
+export type GbpClient = { id: string; name: string; emirate: string; phone: string; primaryColor: string | null; gbpLocation: string | null }
 
 const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
@@ -49,6 +49,8 @@ export function CalendarWorkspace({
   const allPicked = drafts.length > 0 && pickedDrafts.length === drafts.length
   const approvedCount = posts.filter((p) => p.status === "approved").length
   const exportable = posts.filter((p) => p.status !== "draft").length
+  // a published post's schedule is history, so only the ones still waiting count
+  const scheduled = posts.filter((p) => p.scheduledFor && p.status !== "published")
 
   const cells = monthGrid(month)
   const weeks = Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7))
@@ -144,6 +146,11 @@ export function CalendarWorkspace({
                   <span className={cn("size-2 rounded-full", STATUS_STYLE[s].dot)} /> {STATUS_STYLE[s].label} ({posts.filter((p) => p.status === s).length})
                 </li>
               ))}
+              {client.gbpLocation !== null && (
+                <li className="flex items-center gap-1.5">
+                  <Clock className="size-3" /> Scheduled ({scheduled.length})
+                </li>
+              )}
               <li className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-destructive/60" /> Empty week ({emptyWeeks.length})
               </li>
@@ -178,13 +185,14 @@ export function CalendarWorkspace({
                         const style = STATUS_STYLE[post.status] ?? STATUS_STYLE.draft
                         const isSelected = post.id === selectedId
                         const pickable = post.status === "draft"
+                        const waiting = Boolean(post.scheduledFor) && post.status !== "published"
                         return (
                           <div key={key} role="gridcell" className="relative">
                             <button
                               type="button"
                               onClick={() => setSelectedId(post.id)}
                               aria-pressed={isSelected}
-                              aria-label={`${longDayLabel(key)}: ${POST_TYPES[post.postType] ?? post.postType}, ${categoryLabel(post.category)}, ${style.label}`}
+                              aria-label={`${longDayLabel(key)}: ${POST_TYPES[post.postType] ?? post.postType}, ${categoryLabel(post.category)}, ${style.label}${waiting ? `, scheduled for ${scheduleLabel(post.scheduledFor!)}` : ""}`}
                               className={cn(
                                 "flex min-h-[5.5rem] w-full flex-col gap-1 rounded-lg bg-muted/50 p-2 text-start text-xs transition-colors hover:bg-muted",
                                 !inMonth && "opacity-50",
@@ -198,11 +206,13 @@ export function CalendarWorkspace({
                                   {isToday && <span className="rounded bg-primary px-1 text-[9px] font-semibold text-primary-foreground">TODAY</span>}
                                   {/* room for the checkbox that sits over this corner */}
                                   {pickable && <span className="w-4" />}
+                                  {waiting && <Clock aria-hidden className="size-3 text-amber-600 dark:text-amber-400" />}
                                   <span className={cn("size-2 rounded-full", style.dot)} />
                                 </span>
                               </span>
                               <span className={cn("truncate rounded px-1.5 py-0.5 font-medium", post.postType === "offer" ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-primary/10 text-primary")}>{POST_TYPES[post.postType] ?? post.postType}</span>
                               <span className="truncate text-muted-foreground">{categoryLabel(post.category)}</span>
+                              {waiting && <span className="truncate text-[10px] text-amber-700 dark:text-amber-300">Scheduled for {scheduleLabel(post.scheduledFor!)}</span>}
                             </button>
                             {pickable && (
                               <input
@@ -247,13 +257,25 @@ export function CalendarWorkspace({
           </Card>
           <Card className="space-y-2 p-5 text-sm">
             <h3 className="font-semibold">Publishing</h3>
-            <p className="text-muted-foreground">Approved posts are exported as a spreadsheet to publish on Google Business Profile. Nothing is posted automatically.</p>
+            {client.gbpLocation !== null ? (
+              <p className="text-muted-foreground">
+                Connected to <span className="font-medium text-foreground">{client.gbpLocation || "Google Business Profile"}</span>. Open a post and press Publish Now. Scheduled posts are not sent automatically: publish them when their time comes.
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                Approved posts are exported as a spreadsheet to publish on Google Business Profile. To publish from here,{" "}
+                <Link href={`/clients/${client.id}?tab=settings`} className="text-primary hover:underline">
+                  connect Google Business Profile
+                </Link>
+                .
+              </p>
+            )}
           </Card>
         </div>
       </div>
 
       {selected ? (
-        <PostDetail key={selected.id} post={selected} clientName={client.name} phone={client.phone} brandColor={client.primaryColor} onDeleted={() => setSelectedId(null)} />
+        <PostDetail key={selected.id} post={selected} clientName={client.name} phone={client.phone} brandColor={client.primaryColor} gbpLocation={client.gbpLocation} onDeleted={() => setSelectedId(null)} />
       ) : (
         posts.length === 0 ? (
           <EmptyState icon={CalendarDays} title={`No posts in ${monthLabel(month)} yet`} description="Draft a few weeks of Google Business Profile posts in one go: three a week, in Arabic, English or both, covering your keywords.">

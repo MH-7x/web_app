@@ -6,6 +6,7 @@ import { heuristicScore, isMostlyArabic } from "@/lib/humanizer-patterns"
 import { applyUnits, unitsOf, type Strictness, type Unit, type UnitOutcome } from "@/lib/humanizer-types"
 import { STRICTNESS_RULES } from "@/lib/prompts/humanizer"
 import { loadTemplate } from "@/lib/prompts/store"
+import { getCategoryContext } from "@/lib/prompts/templates"
 
 export type HumanizeOptions = { maxChars?: number }
 export type Humanized = { text: string; warnings: string[] }
@@ -76,9 +77,9 @@ function rewritePrompt(jobs: Job[]) {
 
 const TEMPERATURE: Record<Strictness, number> = { light: 0.4, medium: 0.7, strict: 0.9 }
 
-async function rewrite(jobs: Job[], strictness: Strictness): Promise<string[]> {
+async function rewrite(jobs: Job[], strictness: Strictness, category?: string): Promise<string[]> {
   const out = await generateJSON<{ items?: { final?: string }[] }>(rewritePrompt(jobs), ITEMS_SCHEMA, {
-    systemInstruction: (await loadTemplate("humanizer")).render({ strictness_rules: STRICTNESS_RULES[strictness] }),
+    systemInstruction: (await loadTemplate("humanizer")).render({ strictness_rules: STRICTNESS_RULES[strictness], category_context: getCategoryContext(category) }),
     temperature: TEMPERATURE[strictness],
   })
   const items = out.items ?? []
@@ -110,12 +111,12 @@ function chunks<T>(items: T[], size: (item: T) => number, maxItems: number, maxS
  * Rewrite several texts at once. A text that comes back with a lost phone number, a blown length limit or the like
  * gets one more attempt on its own, with the problem spelled out. What is still wrong after that is returned as a warning.
  */
-export async function humanizeMany(items: { text: string; maxChars?: number }[], strictness: Strictness): Promise<Humanized[]> {
+export async function humanizeMany(items: { text: string; maxChars?: number }[], strictness: Strictness, category?: string): Promise<Humanized[]> {
   const results: Humanized[] = new Array(items.length)
   const indexed = items.map((item, index) => ({ ...item, index }))
 
   for (const group of chunks(indexed, (i) => i.text.length, 12, 10000)) {
-    const rewritten = await rewrite(group, strictness)
+    const rewritten = await rewrite(group, strictness, category)
     const retry: { at: number; job: Job }[] = []
     group.forEach((job, k) => {
       const problems = problemsWith(job.text, rewritten[k], job.maxChars)
@@ -123,7 +124,7 @@ export async function humanizeMany(items: { text: string; maxChars?: number }[],
       if (problems.length) retry.push({ at: job.index, job: { text: job.text, maxChars: job.maxChars, fix: problems } })
     })
     if (retry.length) {
-      const second = await rewrite(retry.map((r) => r.job), strictness)
+      const second = await rewrite(retry.map((r) => r.job), strictness, category)
       retry.forEach((r, k) => {
         const first = problemsWith(r.job.text, results[r.at].text, r.job.maxChars)
         const again = problemsWith(r.job.text, second[k], r.job.maxChars)
@@ -180,9 +181,9 @@ export async function scoreContent(text: string): Promise<number> {
 /* ---------------------------------------------------------------- pipelines */
 
 /** Humanize and score a list of units: two Gemini calls for a typical piece of content. */
-export async function humanizeUnits(units: Unit[], strictness: Strictness): Promise<UnitOutcome[]> {
+export async function humanizeUnits(units: Unit[], strictness: Strictness, category?: string): Promise<UnitOutcome[]> {
   if (!units.length) return []
-  const rewritten = await humanizeMany(units.map((u) => ({ text: u.text, maxChars: u.maxChars })), strictness)
+  const rewritten = await humanizeMany(units.map((u) => ({ text: u.text, maxChars: u.maxChars })), strictness, category)
   const scores = await scoreMany([...units.map((u) => u.text), ...rewritten.map((r) => r.text)])
   return units.map((u, i) => ({
     key: u.key,
@@ -197,8 +198,8 @@ export async function humanizeUnits(units: Unit[], strictness: Strictness): Prom
 }
 
 /** Humanize everything in a generated result and return the rewritten result with per-piece scores. */
-export async function humanizeResult<T extends ContentType>(type: T, result: ResultMap[T], strictness: Strictness) {
-  const units = await humanizeUnits(unitsOf(type, result), strictness)
+export async function humanizeResult<T extends ContentType>(type: T, result: ResultMap[T], strictness: Strictness, category?: string) {
+  const units = await humanizeUnits(unitsOf(type, result), strictness, category)
   const next = applyUnits(type, result, Object.fromEntries(units.map((u) => [u.key, u.after])))
   return { result: next, units }
 }

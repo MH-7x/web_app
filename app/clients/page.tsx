@@ -5,6 +5,7 @@ import { connection } from "next/server"
 import { Suspense } from "react"
 
 import { ClientsSkeleton } from "@/components/skeletons"
+import { CategoryBadge } from "@/components/category-badge"
 import { ClientAvatar } from "@/components/client-avatar"
 import { ClientsFilters } from "@/components/clients-filters"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
@@ -41,10 +42,11 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
   const sp = await searchParams
   const q = first(sp.q)
   const emirate = first(sp.emirate)
+  const category = first(sp.category)
   const requested = Math.max(1, Number.parseInt(first(sp.page), 10) || 1)
 
   const emirateCounts = await getEmirateCounts()
-  const { items, total } = await listClients({ q, emirate }, requested)
+  const { items, total } = await listClients({ q, emirate, category }, requested)
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const page = Math.min(requested, pages)
   const now = new Date()
@@ -53,11 +55,12 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
     const next = new URLSearchParams()
     if (q) next.set("q", q)
     if (emirate) next.set("emirate", emirate)
+    if (category) next.set("category", category)
     if (p > 1) next.set("page", String(p))
     return next.size ? `/clients?${next}` : "/clients"
   }
 
-  const filtering = Boolean(q || emirate)
+  const filtering = Boolean(q || emirate || category)
 
   return (
     <>
@@ -86,7 +89,10 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
                     <Link href={`/clients/${c.id}`} className="group flex items-center gap-3">
                       <ClientAvatar id={c.id} name={c.name} />
                       <span className="min-w-0">
-                        <span className="block truncate font-medium group-hover:text-primary">{c.name}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="truncate font-medium group-hover:text-primary">{c.name}</span>
+                          <CategoryBadge category={c.category} />
+                        </span>
                         <span className="block truncate text-xs text-muted-foreground">ID: {c.slug}</span>
                       </span>
                     </Link>

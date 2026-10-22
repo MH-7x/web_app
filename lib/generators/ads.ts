@@ -9,11 +9,12 @@ import {
   type FbObjective,
 } from "@/lib/ads-types"
 import { normalizeUaeNumber, toE164 } from "@/lib/client-schema"
+import type { ClientCategory } from "@/lib/constants"
 import type { ClientDetail } from "@/lib/clients"
 import { languagesFor, type Language, type Localized } from "@/lib/content-types"
 import { GeminiError, generateJSON } from "@/lib/gemini"
 import { loadTemplate } from "@/lib/prompts/store"
-import { LANGUAGE_RULE, NO_INVENTING, clientBrief, type Lang } from "@/lib/prompts/shared"
+import { LANGUAGE_RULE, NO_INVENTING, categoryContext, clientBrief, type Lang } from "@/lib/prompts/shared"
 
 /* --------------------------------------------------------------- helpers */
 
@@ -73,9 +74,19 @@ function localPhone(e164: string) {
   return n.length >= 8 ? `0${n.slice(0, 2)} ${n.slice(2, 5)} ${n.slice(5)}` : e164
 }
 
-const DEFAULT_WA_MESSAGE: Record<Lang, (emirate: string) => string> = {
-  en: (e) => `Hi, I'd like a free moving quote in ${e}.`,
-  ar: (e) => `مرحباً، أرغب في الحصول على عرض سعر مجاني لنقل الأثاث في ${e}.`,
+const DEFAULT_WA_MESSAGE: Record<ClientCategory, Record<Lang, (emirate: string) => string>> = {
+  moving: {
+    en: (e) => `Hi, I'd like a free moving quote in ${e}.`,
+    ar: (e) => `مرحباً، أرغب في الحصول على عرض سعر مجاني لنقل الأثاث في ${e}.`,
+  },
+  used_furniture: {
+    en: (e) => `Hi, I'm interested in used furniture in ${e}. What do you have available?`,
+    ar: (e) => `مرحباً، أبحث عن أثاث مستعمل في ${e}. ما المتوفر لديكم؟`,
+  },
+  pickup_rental: {
+    en: (e) => `Hi, I'd like the rates for renting a pickup in ${e}.`,
+    ar: (e) => `مرحباً، أرغب في معرفة أسعار تأجير بيك أب في ${e}.`,
+  },
 }
 
 async function fbSystem(client: ClientDetail, lang: Lang, emirate: string, objective: FbObjective, count: number) {
@@ -95,6 +106,7 @@ async function fbSystem(client: ClientDetail, lang: Lang, emirate: string, objec
       phone_local: localPhone(client.phone),
       website: site,
       company_details: adsBrief(client),
+      category_context: categoryContext(client),
       no_inventing: NO_INVENTING,
     },
     lang
@@ -158,7 +170,7 @@ async function fbAdsFor(client: ClientDetail, lang: Lang, emirate: string, objec
     description: (a.description ?? "").trim(),
     ctaType: allowed.includes(a.ctaType ?? "") ? a.ctaType! : allowed[0],
     // built in code, never by the model, so the number is always the client's
-    whatsappLink: `https://wa.me/${digits}?text=${encodeURIComponent((a.whatsappMessage ?? "").trim() || DEFAULT_WA_MESSAGE[lang](emirate))}`,
+    whatsappLink: `https://wa.me/${digits}?text=${encodeURIComponent((a.whatsappMessage ?? "").trim() || DEFAULT_WA_MESSAGE[client.category][lang](emirate))}`,
   }))
 }
 

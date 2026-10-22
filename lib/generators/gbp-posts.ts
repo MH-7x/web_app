@@ -12,9 +12,11 @@ import {
   type PostCategory,
   type PostLanguage,
 } from "@/lib/gbp-posts-types"
+import type { ClientCategory } from "@/lib/constants"
 import { GeminiError, generateJSON, generateText } from "@/lib/gemini"
 import { loadTemplate } from "@/lib/prompts/store"
-import { NO_INVENTING, clientBrief, tone } from "@/lib/prompts/shared"
+import { NO_INVENTING, categoryContext, clientBrief, tone } from "@/lib/prompts/shared"
+import { getCategoryFallbackServices, getCategoryImageGuide, getCategoryTip } from "@/lib/prompts/templates"
 
 /** One post to write: when it goes out, which angle it takes, what to focus on and which keywords it must cover. */
 export type PostSlot = { date: string; category: PostCategory; service: string; area: string; keywords: string[] }
@@ -41,6 +43,25 @@ const CATEGORY_GUIDE: Record<PostCategory, string> = {
   "area-specific": "Written for one neighbourhood: name it, mention what makes moving there particular (access, parking, building rules), and say the company covers it.",
   "trust-signal": "Reassure: how the team protects belongings, how quotes work, how to reach the company. Use only facts from the company details, no invented reviews, numbers or awards.",
   "behind-the-scenes": "A short, concrete glimpse of the crew at work (loading, wrapping, truck prep). Sensory and specific, in the first person plural.",
+}
+
+const BEHIND_THE_SCENES: Partial<Record<ClientCategory, string>> = {
+  used_furniture: "A short, concrete glimpse of the workshop or showroom (restoring a piece, arranging a display, inspecting a delivery). Sensory and specific, in the first person plural.",
+  pickup_rental: "A short, concrete glimpse of the fleet at work (a pickup being cleaned and checked before handover, a driver loading, the depot in the morning). Sensory and specific, in the first person plural.",
+}
+
+/** The angle guide for one post; the tip and behind-the-scenes angles change with the business category. */
+function categoryGuide(client: ClientDetail, category: PostCategory) {
+  if (category === "customer-tip") return getCategoryTip(client.category) || CATEGORY_GUIDE[category]
+  if (category === "behind-the-scenes") return BEHIND_THE_SCENES[client.category] ?? CATEGORY_GUIDE[category]
+  return CATEGORY_GUIDE[category]
+}
+
+/** The vehicle or scene the image prompt should start from. */
+function imageSubject(client: ClientDetail) {
+  if (client.category === "moving") return client.truckType ? `Truck: ${client.truckType}.` : "A white closed-box moving truck."
+  const scene = getCategoryImageGuide(client.category)
+  return client.category === "pickup_rental" && client.truckType ? `Fleet: ${client.truckType}. ${scene}` : scene
 }
 
 const AI_TELLS =
@@ -81,7 +102,8 @@ async function system(client: ClientDetail, language: PostLanguage) {
     post_max: GBP_POST_MAX,
     arabic_keyword_note: language === "en" ? "" : "For Arabic text use the natural Arabic equivalent of an English keyword. ",
     ai_tells: AI_TELLS,
-    truck_line: client.truckType ? `Truck: ${client.truckType}.` : "A white closed-box moving truck.",
+    truck_line: imageSubject(client),
+    category_context: categoryContext(client),
     uniform: client.uniform,
     brand_colors_line: client.primaryColor ? `Brand colors: primary ${client.primaryColor}${client.secondaryColor ? `, secondary ${client.secondaryColor}` : ""}.` : "",
     no_inventing: NO_INVENTING,
@@ -109,7 +131,7 @@ async function writeBatch(client: ClientDetail, slots: PostSlot[], language: Pos
     `Write exactly ${slots.length} posts, in this order:`,
     ...slots.map(
       (s, i) =>
-        `${i + 1}. Goes out ${longDayLabel(s.date)}. Angle: ${categoryLabel(s.category)}. ${CATEGORY_GUIDE[s.category]} Focus service: ${s.service}. ${
+        `${i + 1}. Goes out ${longDayLabel(s.date)}. Angle: ${categoryLabel(s.category)}. ${categoryGuide(client, s.category)} Focus service: ${s.service}. ${
           s.category === "area-specific" ? `Neighbourhood: ${s.area}.` : `Area to mention if it fits: ${s.area}.`
         } Keywords to cover naturally: ${s.keywords.join("; ")}.`
     ),
@@ -206,7 +228,7 @@ const DAY_PREFERENCE = [1, 3, 5, 2, 4]
  * Keywords are spread so every keyword appears in at least one post.
  */
 export function planSlots(client: ClientDetail, weeks: number, startDate: string, keywords: string[], existingDates: string[] = []): PostSlot[] {
-  const services = client.services.length ? client.services : ["moving services"]
+  const services = client.services.length ? client.services : [client.category === "moving" ? "moving services" : getCategoryFallbackServices(client.category)]
   const areas = client.areas.length ? client.areas : [client.emirate]
   const taken = new Set(existingDates)
   const slots: PostSlot[] = []

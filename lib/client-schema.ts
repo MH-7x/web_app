@@ -1,6 +1,7 @@
-import { EMIRATES } from "@/lib/constants"
+import { DEFAULT_CATEGORY, EMIRATES, isCategory, type ClientCategory } from "@/lib/constants"
 
 export type ClientInput = {
+  category: ClientCategory
   name: string
   nameAr: string
   emirate: string
@@ -22,6 +23,7 @@ export type ClientInput = {
 export type FieldErrors = Partial<Record<keyof ClientInput, string>>
 
 export const EMPTY_CLIENT: ClientInput = {
+  category: DEFAULT_CATEGORY,
   name: "",
   nameAr: "",
   emirate: "",
@@ -41,7 +43,7 @@ export const EMPTY_CLIENT: ClientInput = {
 }
 
 export const STEP_FIELDS: (keyof ClientInput)[][] = [
-  ["name", "nameAr", "emirate", "emiratesServed", "website", "phone", "whatsapp", "areas", "services"],
+  ["category", "name", "nameAr", "emirate", "emiratesServed", "website", "phone", "whatsapp", "areas", "services"],
   ["primaryColor", "secondaryColor"],
   [],
 ]
@@ -96,6 +98,7 @@ export function validateClient(input: ClientInput, fields?: (keyof ClientInput)[
     if (message && (!fields || fields.includes(key))) errors[key] = message
   }
 
+  check("category", !isCategory(input.category) ? "Choose a business category." : null)
   check("name", input.name.trim().length < 2 ? "Enter the English company name." : null)
   check(
     "nameAr",

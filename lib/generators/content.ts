@@ -16,9 +16,10 @@ import {
   type MetaEntry,
   type MetaOptions,
 } from "@/lib/content-types"
+import { CATEGORY_INFO } from "@/lib/constants"
 import { GeminiError, generateJSON, generateText } from "@/lib/gemini"
 import { loadTemplate } from "@/lib/prompts/store"
-import { LANGUAGE_RULE, NO_INVENTING, areas, clientBrief, services, tone, type Lang } from "@/lib/prompts/shared"
+import { LANGUAGE_RULE, NO_INVENTING, areas, categoryContext, clientBrief, services, tone, type Lang } from "@/lib/prompts/shared"
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -37,6 +38,7 @@ const commonVars = (client: ClientDetail, lang: Lang) => ({
   emirate: client.emirate,
   tone: tone(client),
   client_brief: clientBrief(client),
+  category_context: categoryContext(client),
   language_rule: LANGUAGE_RULE[lang],
   no_inventing: NO_INVENTING,
 })
@@ -53,6 +55,7 @@ async function gbpSystemPrompt(client: ClientDetail, lang: Lang, { highlights, m
       areas: areas(client),
       max_chars: maxChars,
       tone: tone(client),
+      category_context: categoryContext(client),
       language_rule: LANGUAGE_RULE[lang],
       highlights: highlights.join("; "),
       no_inventing: NO_INVENTING,
@@ -172,7 +175,7 @@ const META_SCHEMA: ResponseSchema = {
 
 function describePage(client: ClientDetail, page: string) {
   if (page.startsWith("service:")) return `Individual service page for "${page.slice(8)}" in ${client.emirate}`
-  if (page.startsWith("area:")) return `Location page: moving services in ${page.slice(5)}, ${client.emirate}`
+  if (page.startsWith("area:")) return `Location page: ${client.category === "moving" ? "moving services" : CATEGORY_INFO[client.category].label.toLowerCase()} in ${page.slice(5)}, ${client.emirate}`
   const known: Record<string, string> = {
     home: "Homepage",
     services: "Main services hub page that introduces and links to every individual service",

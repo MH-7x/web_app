@@ -10,6 +10,7 @@ import {
   Pencil,
   Phone,
   Search,
+  Settings,
   Sparkles,
   Trash2,
   Zap,
@@ -25,6 +26,7 @@ import { ClientDetailSkeleton } from "@/components/skeletons"
 import { ClientAvatar } from "@/components/client-avatar"
 import { CopyButton } from "@/components/copy-button"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
+import { DisconnectGbpButton } from "@/components/gbp/disconnect-button"
 import { HistoryItem } from "@/components/history-item"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -32,6 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle, Eyebrow } from "@/components/
 import { displayDomain, formatPhone, normalizeUaeNumber } from "@/lib/client-schema"
 import { getClient, getClientContentStats, listClientContent, type ClientDetail } from "@/lib/clients"
 import { CONTENT_TYPES, INITIAL_SETUP_OPTIONS } from "@/lib/constants"
+import { getConnectionSummary } from "@/lib/gbp-api"
 import { formatDate, timeAgo } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -59,7 +62,8 @@ async function ClientDetailContent({
   const [client, stats] = await Promise.all([getClient(id), getClientContentStats(id)])
   if (!client) notFound()
 
-  const tab = first(sp.tab) === "history" ? "history" : "overview"
+  const tabParam = first(sp.tab)
+  const tab = tabParam === "history" ? "history" : tabParam === "settings" ? "settings" : "overview"
   const now = new Date()
 
   return (
@@ -111,10 +115,15 @@ async function ClientDetailContent({
         <TabLink href={`/clients/${client.id}?tab=history`} active={tab === "history"} icon={<FileText />} count={stats.total}>
           Content History
         </TabLink>
+        <TabLink href={`/clients/${client.id}?tab=settings`} active={tab === "settings"} icon={<Settings />}>
+          Settings
+        </TabLink>
       </nav>
 
       {tab === "overview" ? (
         <Overview client={client} stats={stats} now={now} />
+      ) : tab === "settings" ? (
+        <GbpSection clientId={client.id} result={first(sp.gbp)} message={first(sp.message)} />
       ) : (
         <History clientId={client.id} total={stats.total} type={first(sp.type)} q={first(sp.q)} now={now} />
       )}
@@ -396,6 +405,57 @@ function Chips({ label, items, tone, empty }: { label: string; items: string[]; 
         <p className="text-sm text-muted-foreground">{empty}</p>
       )}
     </div>
+  )
+}
+
+/* ---------------------------------------------------------------- settings */
+
+async function GbpSection({ clientId, result, message }: { clientId: string; result: string; message: string }) {
+  const gbp = await getConnectionSummary(clientId)
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-border pb-3">
+        <CardTitle>
+          <MapPin className="size-4 text-muted-foreground" /> Google Business Profile
+        </CardTitle>
+        <Eyebrow>{gbp.connected ? "Connected" : "Not connected"}</Eyebrow>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-5">
+        {result === "connected" && <p role="status" className="rounded-lg bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">Google Business Profile connected.</p>}
+        {result === "error" && (
+          <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {message || "Couldn't connect Google Business Profile. Please try again."}
+          </p>
+        )}
+
+        {gbp.connected ? (
+          <>
+            <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+              <Info label="Location">{gbp.locationName || <span className="text-muted-foreground">Unnamed location</span>}</Info>
+              <Info label="Connected on">{formatDate(gbp.connectedAt)}</Info>
+            </dl>
+            <p className="text-sm text-muted-foreground">Posts can be published from the GBP Posts calendar with Publish Now.</p>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/gbp-posts" className={buttonVariants({ size: "lg" })}>
+                Open GBP Posts
+              </Link>
+              <DisconnectGbpButton clientId={clientId} />
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Connect this client&apos;s listing to publish approved posts straight to Google. Sign in with the Google account that manages the Business Profile.
+            </p>
+            {/* a plain link: the route sets the security cookie and redirects to Google */}
+            <a href={`/api/gbp-connect?clientId=${encodeURIComponent(clientId)}&redirect=1`} className={buttonVariants({ size: "lg" })}>
+              <MapPin /> Connect GBP
+            </a>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
