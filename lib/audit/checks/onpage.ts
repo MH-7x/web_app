@@ -1,7 +1,6 @@
 import { config, fail, list, notChecked, pageCheck, pass, plural, short, siteCheck, warn, type CheckDef, type Ctx } from "@/lib/audit/checks/util"
 import type { CrawledPage } from "@/lib/audit/crawl-types"
-import { containsPhrase, fleschReadingEase, keywordDensity, similarity, words, wordOverlap } from "@/lib/audit/text"
-import type { SiteOutcome } from "@/lib/audit/checks/util"
+import { fleschReadingEase, similarity, words, wordOverlap } from "@/lib/audit/text"
 
 const h1s = (p: CrawledPage) => p.raw!.headings.filter((h) => h.level === 1 && h.text)
 
@@ -31,31 +30,6 @@ function cluster(pages: CrawledPage[], similar: (a: CrawledPage, b: CrawledPage)
 
 const brandTokens = (ctx: Ctx) => new Set([ctx.client.name, ctx.client.emirate, ...ctx.client.emiratesServed, ...ctx.client.areas].flatMap((s) => words(s)))
 const stripBrand = (title: string, drop: Set<string>) => words(title).filter((w) => !drop.has(w)).join(" ")
-
-const keywordGate = (ctx: Ctx): SiteOutcome | null => {
-  if (!ctx.input.targetKeyword) return notChecked("No target keyword was entered when the audit was started.")
-  if (!ctx.targetPage?.raw) return notChecked("The target page could not be read, so the keyword could not be checked.")
-  return null
-}
-
-const kwCheck = (id: string, name: string, where: string, get: (p: CrawledPage) => string, fix: string) =>
-  siteCheck({
-    id,
-    group: "onPage",
-    name,
-    severity: "warning",
-    fix,
-    run: (ctx) => {
-      const gate = keywordGate(ctx)
-      if (gate) return gate
-      const p = ctx.targetPage!
-      const keyword = ctx.input.targetKeyword!
-      const ok = containsPhrase(get(p), keyword)
-      return ok
-        ? pass(`Found in ${where}`, `"${keyword}" appears in the ${where} of ${p.path}.`, { checked: 1, failed: 0 })
-        : warn(`Missing from ${where}`, `"${keyword}" does not appear in the ${where} of ${p.path}.`, { urls: [p.path], checked: 1, failed: 1 })
-    },
-  })
 
 const REQUIRED: Record<string, (ctx: Ctx) => (keyof import("@/lib/audit/extract").RawSchemaNode | "address")[]> = {
   localbusiness: (ctx) => ["name", "telephone", ...(ctx.isServiceArea ? [] : (["address"] as const))],
@@ -466,28 +440,7 @@ export const checks: CheckDef[] = [
   }),
 
   /* ----------------------------------------------------------- keywords */
-  kwCheck("kw-title", "Target keyword in the title", "title", (p) => p.raw!.title, "Put the target keyword near the start of the title tag."),
-  kwCheck("kw-h1", "Target keyword in the H1", "H1", (p) => h1s(p)[0]?.text ?? "", "Include the target keyword in the page's H1."),
-  kwCheck("kw-first100", "Target keyword in the first 100 words", "first 100 words", (p) => words(p.raw!.mainText).slice(0, 100).join(" "), "Mention the target keyword naturally in the opening paragraph."),
-  kwCheck("kw-url", "Target keyword in the URL", "URL", (p) => decodeURIComponent(p.path).replace(/[-_/]/g, " "), "Use the keyword in the page's URL slug (for example /villa-movers-dubai)."),
-  kwCheck("kw-meta", "Target keyword in the meta description", "meta description", (p) => p.raw!.metaDescription, "Include the target keyword in the meta description."),
-  siteCheck({
-    id: "kw-density",
-    group: "onPage",
-    name: "Keyword density (stuffing check)",
-    severity: "warning",
-    fix: "Use the keyword where it reads naturally and vary the wording; aim for under about 3% of the words.",
-    run: (ctx) => {
-      const gate = keywordGate(ctx)
-      if (gate) return gate
-      const p = ctx.targetPage!
-      const d = keywordDensity(p.raw!.mainText, ctx.input.targetKeyword!)
-      if (d === 0) return warn("0%", `"${ctx.input.targetKeyword}" never appears in the body text of ${p.path}.`, { urls: [p.path], checked: 1, failed: 1 })
-      return d > config.keywordDensityMax
-        ? warn(`${d}%`, `"${ctx.input.targetKeyword}" makes up ${d}% of the words on ${p.path}, which looks like keyword stuffing.`, { urls: [p.path], checked: 1, failed: 1 })
-        : pass(`${d}%`, `"${ctx.input.targetKeyword}" is about ${d}% of the words on ${p.path}, a natural level.`, { checked: 1, failed: 0 })
-    },
-  }),
+  // per-page keyword placement comes from the pairs entered at audit start: see lib/audit/keywords.ts
   siteCheck({
     id: "rankings-organic",
     group: "onPage",

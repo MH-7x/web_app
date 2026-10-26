@@ -16,6 +16,7 @@ import {
   validateClient,
   type ClientInput,
   type FieldErrors,
+  type OtherLink,
 } from "@/lib/client-schema"
 import { CATEGORIES, CATEGORY_INFO, EMIRATES, INITIAL_SETUP_OPTIONS, SERVICES_BY_CATEGORY, TONES, type ClientCategory } from "@/lib/constants"
 import type { SetupClient, SetupStepId } from "@/lib/onboarding"
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils"
 
 const STEPS = [
   { title: "Company Info", hint: "Emirate, coverage & contacts" },
-  { title: "Brand & Style", hint: "Tone, truck livery, colors" },
+  { title: "Brand & Style", hint: "Tone, colors & links" },
   { title: "Initial Setup", hint: "What to generate first" },
 ] as const
 
@@ -613,6 +614,7 @@ function ColorField({ label, value, error, onChange }: { label: string; value: s
 
 function BrandStep({ values, errors, set }: StepProps) {
   return (
+    <>
     <Section title="Brand & Style" description="Used to keep generated copy on-brand.">
       <div className="grid gap-5 sm:grid-cols-2">
         <ColorField label="Primary Color" value={values.primaryColor} error={errors.primaryColor} onChange={(v) => set("primaryColor", v)} />
@@ -652,6 +654,51 @@ function BrandStep({ values, errors, set }: StepProps) {
       <Field label="Internal Operating Notes" hint="Anything the writers should know (client requests, operating constraints).">
         {(p) => <Textarea {...p} value={values.notes} onChange={(e) => set("notes", e.target.value)} placeholder="e.g. Client wants the WhatsApp button prominent on all ad copy." rows={4} />}
       </Field>
+    </Section>
+    <LinksSection values={values} errors={errors} set={set} />
+    </>
+  )
+}
+
+function LinksSection({ values, errors, set }: StepProps) {
+  function updateLink(i: number, patch: Partial<OtherLink>) {
+    set("otherLinks", values.otherLinks.map((l, j) => (j === i ? { ...l, ...patch } : l)))
+  }
+
+  return (
+    <Section title="Links" description="Social pages and the Drive folder. Used by the WhatsApp message on the client page.">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Facebook Page URL" error={errors.facebookUrl}>
+          {(p) => <Input {...p} type="url" inputMode="url" value={values.facebookUrl} onChange={(e) => set("facebookUrl", e.target.value)} placeholder="https://facebook.com/alafnanmovers" />}
+        </Field>
+        <Field label="Instagram Page URL" error={errors.instagramUrl}>
+          {(p) => <Input {...p} type="url" inputMode="url" value={values.instagramUrl} onChange={(e) => set("instagramUrl", e.target.value)} placeholder="https://instagram.com/alafnanmovers" />}
+        </Field>
+        <Field label="Google Drive Link" error={errors.driveLink} hint="Folder where the client's assets are stored." className="sm:col-span-2">
+          {(p) => <Input {...p} type="url" inputMode="url" value={values.driveLink} onChange={(e) => set("driveLink", e.target.value)} placeholder="https://drive.google.com/drive/folders/..." />}
+        </Field>
+      </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">Other Links</legend>
+        {values.otherLinks.map((link, i) => (
+          <div key={i} className="flex gap-2">
+            <Input aria-label={`Other link ${i + 1} label`} value={link.label} onChange={(e) => updateLink(i, { label: e.target.value })} placeholder="Label (e.g. TikTok)" className="w-40 shrink-0" />
+            <Input aria-label={`Other link ${i + 1} URL`} type="url" inputMode="url" value={link.url} onChange={(e) => updateLink(i, { url: e.target.value })} placeholder="https://tiktok.com/@alafnan" />
+            <Button type="button" variant="outline" size="icon-lg" aria-label={`Remove other link ${i + 1}`} onClick={() => set("otherLinks", values.otherLinks.filter((_, j) => j !== i))} className="size-9 shrink-0">
+              <X />
+            </Button>
+          </div>
+        ))}
+        {errors.otherLinks && (
+          <p role="alert" className="text-xs text-destructive">
+            {errors.otherLinks}
+          </p>
+        )}
+        <Button type="button" variant="outline" onClick={() => set("otherLinks", [...values.otherLinks, { label: "", url: "" }])}>
+          <Plus /> Add link
+        </Button>
+      </fieldset>
     </Section>
   )
 }

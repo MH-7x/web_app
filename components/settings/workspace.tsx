@@ -5,6 +5,7 @@ import { useState } from "react"
 import { ApiKeysTab } from "@/components/settings/api-keys-tab"
 import { GeneralTab } from "@/components/settings/general-tab"
 import { PromptsTab } from "@/components/settings/prompts-tab"
+import type { BusinessSettings } from "@/lib/business-types"
 import type { TemplateRecord } from "@/lib/prompts/store"
 import { cn } from "@/lib/utils"
 
@@ -16,7 +17,7 @@ const TABS = [
 
 type Tab = (typeof TABS)[number]["id"]
 
-export function SettingsWorkspace({ templates, maskedKey, model }: { templates: TemplateRecord[]; maskedKey: string | null; model: string }) {
+export function SettingsWorkspace({ templates, maskedKey, model, business }: { templates: TemplateRecord[]; maskedKey: string | null; model: string; business: BusinessSettings }) {
   const [tab, setTab] = useState<Tab>("general")
 
   return (
@@ -40,7 +41,7 @@ export function SettingsWorkspace({ templates, maskedKey, model }: { templates: 
 
       {/* all stay mounted so an unsaved prompt edit survives a visit to another tab */}
       <div id="st-panel-general" role="tabpanel" aria-labelledby="st-tab-general" hidden={tab !== "general"}>
-        <GeneralTab />
+        <GeneralTab business={business} />
       </div>
       <div id="st-panel-prompts" role="tabpanel" aria-labelledby="st-tab-prompts" hidden={tab !== "prompts"}>
         <PromptsTab initial={templates} />

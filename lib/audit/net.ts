@@ -27,26 +27,35 @@ function isPrivateAddress(ip: string): boolean {
   return v6 === "::" || v6 === "::1" || v6.startsWith("fc") || v6.startsWith("fd") || /^fe[89ab]/.test(v6)
 }
 
-const hostCache = new Map<string, Promise<boolean>>()
+const hostCache = new Map<string, boolean>()
 
-/** True when the host resolves only to public addresses. Results are cached per host. */
-export function isPublicHost(hostname: string): Promise<boolean> {
-  const host = hostname.replace(/^\[|\]$/g, "").toLowerCase()
-  let cached = hostCache.get(host)
-  if (!cached) {
-    cached = (async () => {
-      if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return false
+/**
+ * True when the host resolves only to public addresses. A verdict is cached per host, but a failed DNS lookup is not:
+ * a single network hiccup must not mark a real website as "not public" until the server restarts.
+ */
+export async function isPublicHost(hostname: string): Promise<boolean> {
+  const host = hostname.replace(/^[|]$/g, "").toLowerCase()
+  if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return false
+  const cached = hostCache.get(host)
+  if (cached !== undefined) return cached
+
+  let addresses: { address: string }[] = []
+  if (isIP(host)) addresses = [{ address: host }]
+  else {
+    for (let attempt = 0; attempt < 2 && !addresses.length; attempt++) {
       try {
-        const addresses = isIP(host) ? [{ address: host }] : await lookup(host, { all: true })
-        return addresses.length > 0 && !addresses.some((a) => isPrivateAddress(a.address))
+        addresses = await lookup(host, { all: true })
       } catch {
-        return false
+        // retry once, then give up without caching
       }
-    })()
-    hostCache.set(host, cached)
-    if (hostCache.size > 500) hostCache.delete(hostCache.keys().next().value!)
+    }
   }
-  return cached
+  if (!addresses.length) return false
+
+  const ok = !addresses.some((a) => isPrivateAddress(a.address))
+  hostCache.set(host, ok)
+  if (hostCache.size > 500) hostCache.delete(hostCache.keys().next().value!)
+  return ok
 }
 
 export async function assertPublicUrl(raw: string) {
@@ -57,7 +66,7 @@ export async function assertPublicUrl(raw: string) {
     throw new Error("That is not a valid website address.")
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Only http(s) websites can be audited.")
-  if (!(await isPublicHost(url.hostname))) throw new Error("That address is not a public website.")
+  if (!(await isPublicHost(url.hostname))) throw new Error("That address is not a public website, or its domain name could not be resolved.")
   return url
 }
 

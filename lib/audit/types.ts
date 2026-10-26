@@ -128,7 +128,8 @@ export type AuditScoresV2 = {
   truncated: boolean
   durationSec: number
   confidence: "high" | "medium" | "low"
-  config: { targetKeyword: string | null; targetUrl: string | null; maxPages: number }
+  /** targetKeyword/targetUrl are only set on audits run before multi-keyword checks existed */
+  config: { targetKeyword?: string | null; targetUrl?: string | null; maxPages: number }
   lighthouse: LighthouseRun[]
   crux: CruxResult | null
 }
@@ -151,7 +152,28 @@ export type AuditPayloadV2 = {
   crawl: CrawlSummary
 }
 
-export type AuditInput = { targetKeyword: string | null; targetUrl: string | null }
+/** A page and the primary keyword it should be optimised for. `url` is a path such as /services/villa-moving. */
+export type KeywordPair = { url: string; keyword: string }
+
+export type AuditInput = { keywordPairs: KeywordPair[] }
+
+/** How well one page is optimised for its keyword: each flag is "the keyword appears there". */
+export type KeywordCheck = {
+  url: string
+  keyword: string
+  /** false when no crawled page matched `url`; the flags are then all false */
+  found: boolean
+  inTitle: boolean
+  inH1: boolean
+  inFirst100: boolean
+  inUrl: boolean
+  inMeta: boolean
+  /** how many of the five places contain the keyword, 0-5 */
+  score: number
+}
+
+export type LogLevel = "info" | "warn" | "error"
+export type LogEntry = { timestamp: number; level: LogLevel; message: string }
 
 /* ================================================ v1 (older stored audits) */
 
@@ -192,7 +214,22 @@ export type AuditScores = {
 
 /* ==================================================================== jobs */
 
-export type JobStatus = "queued" | "running" | "completed" | "failed"
+/** "waiting": the crawl is done and the audit is paused until the speed-test pages are chosen. */
+export type JobStatus = "queued" | "running" | "waiting" | "completed" | "failed"
+
+export type SpeedDevice = "mobile" | "desktop"
+
+/** A crawled page that can be speed tested, offered to the user once the crawl has finished. */
+export type SpeedCandidate = {
+  url: string
+  path: string
+  title: string
+  inlinks: number
+  /** what the audit would test on its own: the homepage on both devices, the main service and area pages on mobile */
+  suggested: SpeedDevice[]
+}
+
+export type SpeedSelection = { url: string; device: SpeedDevice }
 
 export type JobSnapshot = {
   id: string
@@ -203,8 +240,11 @@ export type JobSnapshot = {
   progress: number
   phase: string
   message: string
-  /** newest last, capped */
-  log: string[]
+  /** the pages to choose from; only present while status is "waiting" */
+  speedCandidates: SpeedCandidate[] | null
+  /** log entries from index `logStart` on, oldest first */
+  log: LogEntry[]
+  logStart: number
   pagesCrawled: number
   auditId: string | null
   error: string | null

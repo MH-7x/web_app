@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { getClient } from "@/lib/clients"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { db } from "@/lib/db"
-import { GEMINI_MODEL } from "@/lib/gemini"
+import { getModelName } from "@/lib/gemini"
 import { generateReport } from "@/lib/generators/reports"
 import { buildStats, parseReportRequest, renderReportMarkdown } from "@/lib/reports-types"
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         subtype: month.label,
         language: "en",
         content: renderReportMarkdown(client.name, month, stats, report),
-        metadata: { month: month.key, metrics, previous: previous ?? null, report, model: GEMINI_MODEL },
+        metadata: { month: month.key, metrics, previous: previous ?? null, report, model: getModelName() },
       },
     })
     return NextResponse.json({ id: row.id, report })

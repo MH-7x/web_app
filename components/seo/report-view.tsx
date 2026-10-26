@@ -3,12 +3,13 @@
 import { AlertTriangle, ChevronDown, CircleHelp, CircleX, Download, FileCode, FileText, Info, ShieldAlert, TriangleAlert, CircleCheck } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { AuditLog } from "@/components/seo/audit-log"
 import { ScoreRing, scoreTone } from "@/components/seo/score-ring"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, Eyebrow } from "@/components/ui/card"
 import { GROUPS } from "@/lib/audit/groups"
-import type { AuditPayloadV2, AuditScoresV2, CheckResult, CheckStatus, GroupId, PageRecord, Priority, RecommendationV2 } from "@/lib/audit/types"
+import type { AuditPayloadV2, AuditScoresV2, CheckResult, CheckStatus, GroupId, KeywordCheck, LogEntry, PageRecord, Priority, RecommendationV2 } from "@/lib/audit/types"
 import { cn } from "@/lib/utils"
 
 const STATUS: Record<CheckStatus, { label: string; chip: string; icon: typeof Info }> = {
@@ -144,6 +145,87 @@ function GroupGrid({ scores, onPick }: { scores: AuditScoresV2; onPick: (g: Grou
       })}
     </section>
   )
+}
+
+/* ------------------------------------------------------------ keyword table */
+
+const KEYWORD_COLUMNS = [
+  { key: "inTitle", label: "Title" },
+  { key: "inH1", label: "H1" },
+  { key: "inFirst100", label: "First 100 Words" },
+  { key: "inUrl", label: "URL" },
+  { key: "inMeta", label: "Meta Desc" },
+] as const
+
+function Tick({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span aria-label={`${label}: ${ok ? "yes" : "no"}`} className={cn("inline-flex size-6 items-center justify-center rounded-md text-sm font-bold", ok ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-destructive/15 text-destructive")}>
+      {ok ? "✓" : "✗"}
+    </span>
+  )
+}
+
+function KeywordTable({ checks }: { checks: KeywordCheck[] }) {
+  return (
+    <section aria-label="Keyword optimization by page" className="space-y-3">
+      <div>
+        <h2 className="font-semibold">Keyword Optimization by Page</h2>
+        <p className="text-sm text-muted-foreground">Where each page&apos;s primary keyword appears. 5/5 is fully optimised; 0 to 2 is critical.</p>
+      </div>
+      <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="bg-muted/60 text-left text-[11px] tracking-wider text-muted-foreground uppercase">
+            <tr>
+              <th className="px-4 py-3 font-medium">Page</th>
+              <th className="px-4 py-3 font-medium">Keyword</th>
+              {KEYWORD_COLUMNS.map((c) => (
+                <th key={c.key} className="px-3 py-3 text-center font-medium">
+                  {c.label}
+                </th>
+              ))}
+              <th className="px-4 py-3 text-center font-medium">Score</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {checks.map((k, i) => (
+              <tr key={`${i}-${k.url}-${k.keyword}`}>
+                <td className="px-4 py-3 font-mono text-xs" dir="auto">
+                  {k.url === "/" ? "/ (homepage)" : decodeURIComponentSafe(k.url)}
+                </td>
+                <td className="px-4 py-3" dir="auto">
+                  {k.keyword}
+                </td>
+                {k.found ? (
+                  <>
+                    {KEYWORD_COLUMNS.map((c) => (
+                      <td key={c.key} className="px-3 py-3 text-center">
+                        <Tick ok={k[c.key]} label={c.label} />
+                      </td>
+                    ))}
+                    <td className="px-4 py-3 text-center">
+                      <span className={cn("rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums", k.score === 5 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : k.score <= 2 ? "bg-destructive/15 text-destructive" : "bg-amber-500/15 text-amber-700 dark:text-amber-300")}>{k.score}/5</span>
+                    </td>
+                  </>
+                ) : (
+                  <td colSpan={KEYWORD_COLUMNS.length + 1} className="px-3 py-3 text-center text-sm text-destructive">
+                    Page not found during crawl
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+function decodeURIComponentSafe(s: string) {
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    return s
+  }
 }
 
 /* --------------------------------------------------------- recommendations */
@@ -459,7 +541,7 @@ const TABS = [
   { id: "crawl", label: "Crawl and speed" },
 ] as const
 
-export function ReportView({ auditId, scores, payload, recommendations }: { auditId: string; scores: AuditScoresV2; payload: AuditPayloadV2; recommendations: RecommendationV2[] }) {
+export function ReportView({ auditId, scores, payload, recommendations, keywordChecks = [], log = [] }: { auditId: string; scores: AuditScoresV2; payload: AuditPayloadV2; recommendations: RecommendationV2[]; keywordChecks?: KeywordCheck[]; log?: LogEntry[] }) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("recs")
   const [focus, setFocus] = useState<GroupId | null>(null)
 
@@ -473,6 +555,8 @@ export function ReportView({ auditId, scores, payload, recommendations }: { audi
           setTab("checks")
         }}
       />
+
+      {keywordChecks.length > 0 && <KeywordTable checks={keywordChecks} />}
 
       <div role="tablist" aria-label="Report sections" className="flex flex-wrap gap-1 border-b border-border">
         {TABS.map((t) => (
@@ -497,6 +581,8 @@ export function ReportView({ auditId, scores, payload, recommendations }: { audi
       )}
       {tab === "pages" && <Pages pages={payload.pages} checks={payload.checks} />}
       {tab === "crawl" && <CrawlLog scores={scores} payload={payload} />}
+
+      <AuditLog entries={log} />
     </div>
   )
 }

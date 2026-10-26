@@ -1,5 +1,5 @@
 import { GROUPS } from "@/lib/audit/groups"
-import type { AuditPayloadV2, AuditScoresV2, CheckResult, CheckStatus, RecommendationV2 } from "@/lib/audit/types"
+import type { AuditPayloadV2, AuditScoresV2, CheckResult, CheckStatus, KeywordCheck, RecommendationV2 } from "@/lib/audit/types"
 
 /** Readable exports of a v2 audit: Markdown and a self-contained HTML page. JSON is the stored audit as-is. */
 
@@ -10,6 +10,7 @@ export type ReportInput = {
   scores: AuditScoresV2
   payload: AuditPayloadV2
   recommendations: RecommendationV2[]
+  keywordChecks?: KeywordCheck[]
 }
 
 const STATUS_LABEL: Record<CheckStatus, string> = { pass: "Pass", warning: "Warning", fail: "Fail", not_checked: "Not checked" }
@@ -17,6 +18,22 @@ const PRIORITY_LABEL = { high: "High", medium: "Medium", low: "Low" } as const
 const when = (d: Date) => `${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(d)} UTC`
 const groupLabel = (id: string) => GROUPS.find((g) => g.id === id)?.label ?? id
 const ms = (v: number | null) => (v == null ? "n/a" : v >= 1000 ? `${(v / 1000).toFixed(1)} s` : `${Math.round(v)} ms`)
+
+const KW_COLS = [
+  ["Title", "inTitle"],
+  ["H1", "inH1"],
+  ["First 100 Words", "inFirst100"],
+  ["URL", "inUrl"],
+  ["Meta Desc", "inMeta"],
+] as const
+const decoded = (s: string) => {
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    return s
+  }
+}
+const kwPage = (k: KeywordCheck) => (k.url === "/" ? "/ (homepage)" : decoded(k.url))
 
 const checksOf = (r: ReportInput, group: string) => r.payload.checks.filter((c) => c.group === group)
 
@@ -39,6 +56,11 @@ export function reportMarkdown(r: ReportInput): string {
   for (const g of GROUPS) {
     const s = scores.groups[g.id]
     out.push(`| ${g.label} | ${s.score ?? "n/a"} | ${s.grade ?? "-"} | ${s.passed} | ${s.warnings} | ${s.failed} | ${s.notChecked} |`)
+  }
+
+  if (r.keywordChecks?.length) {
+    out.push("", "## Keyword optimization by page", "", `| Page | Keyword | ${KW_COLS.map(([l]) => l).join(" | ")} | Score |`, `|---|---|${KW_COLS.map(() => "---|").join("")}---|`)
+    for (const k of r.keywordChecks) out.push(k.found ? `| ${kwPage(k)} | ${k.keyword} | ${KW_COLS.map(([, key]) => (k[key] ? "✓" : "✗")).join(" | ")} | ${k.score}/5 |` : `| ${kwPage(k)} | ${k.keyword} | Page not found during crawl |||||| 0/5 |`)
   }
 
   out.push("", "## Prioritised recommendations", "")
@@ -117,6 +139,16 @@ export function reportHtml(r: ReportInput): string {
     })
     .join("")
 
+  const kwHtml = r.keywordChecks?.length
+    ? `<h2>Keyword optimization by page</h2><table><thead><tr><th>Page</th><th>Keyword</th>${KW_COLS.map(([l]) => `<th>${l}</th>`).join("")}<th>Score</th></tr></thead><tbody>${r.keywordChecks
+        .map((k) =>
+          k.found
+            ? `<tr><td>${esc(kwPage(k))}</td><td>${esc(k.keyword)}</td>${KW_COLS.map(([, key]) => `<td style="text-align:center;font-weight:700;color:${k[key] ? "#059669" : "#dc2626"}">${k[key] ? "✓" : "✗"}</td>`).join("")}<td style="text-align:center"><span class="b" style="background:${k.score === 5 ? "#059669" : k.score <= 2 ? "#dc2626" : "#d97706"}">${k.score}/5</span></td></tr>`
+            : `<tr><td>${esc(kwPage(k))}</td><td>${esc(k.keyword)}</td><td colspan="${KW_COLS.length + 1}" style="color:#dc2626">Page not found during crawl</td></tr>`
+        )
+        .join("")}</tbody></table>`
+    : ""
+
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SEO audit: ${esc(r.clientName)}</title><style>
 body{font:15px/1.5 system-ui,sans-serif;max-width:980px;margin:2rem auto;padding:0 1rem;color:#1c1917}h1{margin:0 0 .25rem}h2{margin-top:2.5rem;border-bottom:1px solid #e7e5e4;padding-bottom:.3rem}small,.why{color:#78716c}table{border-collapse:collapse;width:100%;margin:.5rem 0 1.5rem;font-size:14px}th,td{border:1px solid #e7e5e4;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f5f5f4}.b{color:#fff;border-radius:4px;padding:1px 7px;font-size:12px;white-space:nowrap}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}.card{border:1px solid #e7e5e4;border-radius:8px;padding:10px}.card b{font-size:24px}.note{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin:1rem 0}details{margin-top:4px}@media print{body{max-width:none}}
 </style></head><body>
@@ -128,6 +160,7 @@ ${payload.crawl.confidenceNotes.map((n) => `<div class="note">${esc(n)}</div>`).
     const s = scores.groups[g.id]
     return `<div class="card"><small>${esc(g.label)}</small><br><b>${s.score ?? "–"}</b> ${s.grade ?? ""}<br><small>${s.passed} pass · ${s.warnings} warn · ${s.failed} fail · ${s.notChecked} not checked</small></div>`
   }).join("")}</div>
+${kwHtml}
 <h2>Prioritised recommendations</h2>${recs || "<p>Nothing to fix.</p>"}
 <h2>Results by group</h2>${groupHtml}
 <h2>Pages</h2><table><thead><tr><th>URL</th><th>Status</th><th>Clicks from home</th><th>Issues</th><th>Warnings</th></tr></thead><tbody>${payload.pages.map((p) => `<tr><td>${esc(p.path)}</td><td>${p.status}</td><td>${p.depth ?? "n/a"}</td><td>${p.failures}</td><td>${p.warnings}</td></tr>`).join("")}</tbody></table>

@@ -24,6 +24,10 @@ model Client {
   brandSpecs     Json? // {truckType, uniform, initialSetup}
   tone           String? // "professional, trustworthy"
   notes          String?
+  facebookUrl    String             @default("")
+  instagramUrl   String             @default("")
+  driveLink      String             @default("") // Google Drive folder with the client's assets
+  otherLinks     Json               @default("[]") // [{label, url}] e.g. TikTok, LinkedIn
   apiCredentials Json? // Google OAuth tokens per service
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
@@ -89,6 +93,8 @@ model Audit {
   scores          Json // {onPage, schema, speed, indexation, overall, passed/total per category, pages}
   findings        Json // [{id, category, severity, title, detail, targets: []}]
   recommendations Json // [{findingId, text}]
+  log             String   @default("[]") // JSON [{timestamp, level, message}]: the full crawl log
+  keywordChecks   String   @default("[]") // JSON [{url, keyword, found, inTitle, inH1, inFirst100, inUrl, inMeta, score}]
   createdAt       DateTime @default(now())
 
   @@index([clientId, createdAt])
@@ -106,4 +112,58 @@ model GBPConnection {
   connected       Boolean  @default(true)
   connectedAt     DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model KeywordGroup {
+  id        String   @id @default(cuid())
+  name      String
+  clientId  String? // null: shared across all clients
+  keywords  String   @default("[]") // JSON [{keyword, avgMonthlySearches, threeMonthChange, competition, topOfPageBidLow, topOfPageBidHigh}]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model Project {
+  id                 String   @id @default(cuid())
+  name               String
+  clientName         String
+  contactName        String   @default("")
+  contactWhatsapp    String   @default("")
+  companyDescription String   @default("")
+  websiteUrl         String   @default("")
+  emirate            String   @default("")
+  category           String   @default("moving") // moving, used_furniture, pickup_rental, other
+  pages              String   @default("[]") // JSON [{name, type, notes}]
+  servicePageCount   Int      @default(0)
+  locationPageCount  Int      @default(0)
+  corePages          String   @default("[]") // JSON ["home", "about", "contact", "blog"]
+  projectFocus       String   @default("seo") // ads, seo, combined
+  secondaryServices  String   @default("[]") // JSON ["facebook", "instagram", "social_management", "gbp"]
+  websiteCost        Float    @default(0)
+  seoCost            Float    @default(0)
+  adsCost            Float    @default(0) // no longer used: Google Ads is included in the website price
+  socialCost         Float    @default(0)
+  otherCosts         String   @default("[]") // JSON [{name, amount}]
+  totalCost          Float    @default(0)
+  seoMonths          Int      @default(0)
+  adsMonths          Int      @default(0) // no longer used: Google Ads management is a yes/no (adsIncluded) with no price or duration
+  adsIncluded        Boolean  @default(false) // Google Ads management is included in the website development price
+  paymentTerms       String   @default("")
+  deliveryWeeks      Int      @default(4)
+  proposal           String   @default("") // the generated proposal, markdown
+  status             String   @default("draft") // draft, sent, accepted, declined
+  clientId           String? // set once the project has been converted into a client
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+/// Key/value app settings: business name, tagline and proposal terms.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

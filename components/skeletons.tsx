@@ -232,3 +232,36 @@ export function HumanizerSkeleton() {
     </Wrap>
   )
 }
+
+export function KeywordsSkeleton() {
+  return (
+    <div className="grid gap-5 md:grid-cols-[240px_1fr]">
+      <div className="space-y-3">
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-6 w-32" />
+        <TextPanel lines={5} />
+      </div>
+      <div className="space-y-5">
+        <Panel className="h-20" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Panel className="h-40" />
+          <Panel className="h-40" />
+        </div>
+        <Panel className="h-64" />
+      </div>
+    </div>
+  )
+}
+
+export function ProposalsSkeleton() {
+  return (
+    <Wrap className="max-w-6xl">
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-8 w-16" />
+        <Skeleton className="h-8 w-20" />
+      </div>
+      <Panel className="h-72" />
+    </Wrap>
+  )
+}

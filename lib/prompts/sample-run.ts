@@ -5,6 +5,7 @@ import { generateFacebookAds } from "@/lib/generators/ads"
 import { generateBlog, generateFAQ, generateGBP, generateMeta } from "@/lib/generators/content"
 import { writePosts } from "@/lib/generators/gbp-posts"
 import { humanizeContent, scoreContent } from "@/lib/generators/humanizer"
+import { generateProposal } from "@/lib/generators/proposals"
 import { generateReport } from "@/lib/generators/reports"
 import { dateKey } from "@/lib/gbp-posts-types"
 import { parseMonth } from "@/lib/reports-types"
@@ -31,6 +32,10 @@ export const SAMPLE_CLIENT: ClientDetail = {
   initialSetup: [],
   tones: ["Professional", "Trustworthy"],
   notes: "",
+  facebookUrl: "",
+  instagramUrl: "",
+  driveLink: "",
+  otherLinks: [],
   createdAt: new Date(0),
   updatedAt: new Date(0),
 }
@@ -66,6 +71,32 @@ export async function runSample(name: TemplateName): Promise<string> {
       return `Before:\n${SAMPLE_TEXT}\n\nAfter:\n${await humanizeContent(SAMPLE_TEXT, "medium")}`
     case "humanizer-scorer":
       return `Sample text:\n${SAMPLE_TEXT}\n\nAI-detection score: ${await scoreContent(SAMPLE_TEXT)} / 100`
+    case "proposal":
+      return generateProposal({
+        name: "",
+        clientName: "Al Noor Movers",
+        contactName: "Ahmed",
+        contactWhatsapp: "+971501234567",
+        companyDescription: "A family-run moving company in Sharjah offering villa and apartment moves, packing and storage.",
+        websiteUrl: "",
+        category: "moving",
+        pages: [
+          { name: "Villa Moving", type: "Service", notes: "" },
+          { name: "Packing & Unpacking", type: "Service", notes: "" },
+          { name: "Movers in Al Nahda", type: "Location", notes: "" },
+        ],
+        corePages: ["home", "about", "contact"],
+        projectFocus: "combined",
+        secondaryServices: ["gbp", "facebook"],
+        adsIncluded: true,
+        websiteCost: 3500,
+        seoCost: 2400,
+        socialCost: 600,
+        otherCosts: [],
+        seoMonths: 3,
+        paymentTerms: "50% upfront, 50% on delivery",
+        deliveryWeeks: 4,
+      })
     case "report": {
       const r = await generateReport(c, parseMonth("2026-09"), { impressions: 24500, clicks: 1230, gbpViews: 8340, gbpCalls: 47, adSpend: 3200, conversions: 38 }, { impressions: 20760, clicks: 1098, gbpCalls: 35, adSpend: 3000, conversions: 30 })
       return [r.summary, "Wins:\n" + r.wins.map((w) => `- ${w}`).join("\n"), "Areas to improve:\n" + r.improvements.map((w) => `- ${w}`).join("\n"), "Recommendations:\n" + r.recommendations.map((w) => `- ${w}`).join("\n")].join("\n\n")

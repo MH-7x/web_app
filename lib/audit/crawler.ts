@@ -3,6 +3,7 @@ import type { Browser, Page } from "puppeteer"
 import { AUDIT_CONFIG } from "@/lib/audit/config"
 import type { CrawledPage, CrawlResult, LinkCheck, SitemapData } from "@/lib/audit/crawl-types"
 import { extractPage } from "@/lib/audit/extract"
+import type { AuditLogger } from "@/lib/audit/log"
 import { isPublicHost, safeFetch, traceRedirects, type Hop } from "@/lib/audit/net"
 import { parseRobots } from "@/lib/audit/robots"
 import { runProbes } from "@/lib/audit/site-probes"
@@ -128,8 +129,9 @@ async function checkLinks(
  * afterwards. Every page is read in a real browser, then links, redirects, robots.txt, the sitemap and a set of
  * site-wide probes are collected for the checks to work from.
  */
-export async function crawlSite(browser: Browser, startUrl: string, opts: { maxPages?: number; onProgress: OnProgress; isCancelled?: () => boolean }): Promise<CrawlResult> {
+export async function crawlSite(browser: Browser, startUrl: string, opts: { maxPages?: number; onProgress: OnProgress; log?: AuditLogger; isCancelled?: () => boolean }): Promise<CrawlResult> {
   const { onProgress } = opts
+  const log: AuditLogger = opts.log ?? (() => {})
   const maxPages = opts.maxPages ?? AUDIT_CONFIG.maxPages
   const start = normalizeUrl(startUrl)!
   const origin = new URL(start).origin
@@ -153,6 +155,9 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
   const robots = robotsRes ? { ...robotsRes, rules: parseRobots(robotsRes.text) } : null
   const sitemap = await loadSitemap(origin, robots?.rules.sitemaps ?? [])
   const sitemapSet = new Set(sitemap?.urls ?? [])
+  log("info", robots ? (robots.status === 200 ? "robots.txt found" : `robots.txt not found (HTTP ${robots.status})`) : "robots.txt could not be fetched")
+  log(sitemap?.valid ? "info" : "warn", sitemap?.valid ? `Sitemap read: ${sitemap.urlCount} URLs (${sitemap.url})` : "No valid sitemap.xml found")
+  log("info", llmsRes?.ok ? "llms.txt found" : "No llms.txt found")
 
   /* ---- pages ---- */
   const main: string[] = [start]
@@ -196,6 +201,7 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
     } catch (e) {
       const c = classifyNavigation(e)
       errors.push({ url, kind: c.kind, status: 0, message: c.message })
+      log("error", `Failed to load ${url}: ${c.message}`)
       return
     }
     const status = response?.status() ?? 0
@@ -207,6 +213,7 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
     if (!(headers["content-type"] ?? "").includes("html")) {
       addPage(page, url, finalUrl, status, headers, chain, null)
       if (status >= 400) errors.push({ url, kind: "http", status, message: `HTTP ${status}` })
+      log(status >= 400 ? "warn" : "info", `Crawled ${new URL(finalUrl).pathname || "/"} (HTTP ${status}, not an HTML page)`)
       return
     }
 
@@ -216,6 +223,7 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
       raw = await page.evaluate(extractPage, { viewportH: 800 })
     } catch (e) {
       errors.push({ url, kind: "other", status, message: `Could not read the page (${e instanceof Error ? e.message.slice(0, 80) : "error"})` })
+      log("error", `Could not read ${url}`)
       return
     }
 
@@ -226,7 +234,10 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
     }
 
     addPage(page, url, finalUrl, status, headers, chain, raw)
+    const here = new URL(finalUrl).pathname || "/"
+    log(status >= 400 ? "warn" : "info", `Crawled ${here} (HTTP ${status}${status >= 400 ? "" : `, ${raw.bodyText.split(/s+/).filter(Boolean).length} words`})`)
 
+    let discovered = 0
     for (const l of raw.links) {
       const n = normalizeUrl(l.href)
       if (!n) continue
@@ -250,8 +261,10 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
       if (!seen.has(n)) {
         seen.add(n)
         main.push(n)
+        discovered++
       }
     }
+    if (discovered) log("info", `Discovered ${discovered} new ${discovered === 1 ? "page" : "pages"} linked from ${here}`)
   }
 
   async function worker() {
@@ -300,6 +313,7 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
 
   await Promise.all(Array.from({ length: AUDIT_CONFIG.workers }, worker))
   if (main.length > 0 || seeds.length > 0) truncated = true
+  log(truncated ? "warn" : "info", truncated ? `Crawl stopped at ${maxPages} pages; ${main.length + seeds.length} known pages were not visited` : `Crawl finished: ${pages.length} pages visited`)
 
   /* ---- link graph: inlinks and click depth ---- */
   const lookup = new Map<string, CrawledPage>()
@@ -354,11 +368,17 @@ export async function crawlSite(browser: Browser, startUrl: string, opts: { maxP
   }
   // internal pages beyond the crawl budget (and parameter URLs) still get their status checked
   const targets = [...internalTargets.slice(0, AUDIT_CONFIG.maxInternalLinkChecks), ...externalTargets.slice(0, AUDIT_CONFIG.maxExternalLinkChecks)]
+  log("info", `Checking ${targets.length} links that were not crawled`)
   const linkChecks = opts.isCancelled?.() ? {} : await checkLinks(targets, linkSources, onProgress)
+  const brokenLinks = Object.entries(linkChecks).filter(([, c]) => c.status === 0 || c.status >= 400)
+  for (const [href, c] of brokenLinks.slice(0, 25)) log("warn", `Broken link ${href} (${c.status || c.message || "no response"})`)
+  if (brokenLinks.length > 25) log("warn", `…and ${brokenLinks.length - 25} more broken links`)
+  log("info", `Link check finished: ${brokenLinks.length} of ${targets.length} had problems`)
 
   /* ---- site-wide probes ---- */
   onProgress({ phase: "probes", message: "Checking redirects, security headers, DNS and images", done: 0, total: 1 })
   const probes = await runProbes({ origin, startUrl: start, pages, onProgress })
+  log("info", "Site-wide probes finished")
 
   /* ---- blocked detection ---- */
   const attempted = started

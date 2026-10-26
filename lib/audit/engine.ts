@@ -3,6 +3,8 @@ import { buildContext, plural, type CheckDef, type ClientProfile, type Ctx, type
 import { AUDIT_CONFIG, disabledChecks } from "@/lib/audit/config"
 import type { CrawlResult } from "@/lib/audit/crawl-types"
 import { GROUPS, gradeFor, priorityFor } from "@/lib/audit/groups"
+import { checkKeywords } from "@/lib/audit/keywords"
+import type { AuditLogger } from "@/lib/audit/log"
 import {
   type AuditInput,
   type AuditPayloadV2,
@@ -13,6 +15,7 @@ import {
   type CruxResult,
   type GroupId,
   type GroupScore,
+  type KeywordCheck,
   type LighthouseRun,
   type PageCheckStatus,
   type PageRecord,
@@ -22,6 +25,7 @@ import {
 
 const WEIGHT: Record<Severity, number> = { critical: 3, warning: 2, info: 1 }
 const SITE_UNIT_CAP = 10
+const CRASH_REASON = "The check crashed while running."
 
 const statusFor = (failed: boolean, severity: Severity): CheckStatus => (!failed ? "pass" : severity === "critical" ? "fail" : "warning")
 
@@ -121,7 +125,7 @@ function runCheck(def: CheckDef, ctx: Ctx, pageStatuses: Map<string, Record<stri
   } catch (error) {
     // one broken check must never take the audit down
     console.error(`[audit] check ${def.id} crashed:`, error)
-    return { result: { ...base, status: "not_checked", severity: def.severity, value: "Not checked", message: "This check hit an unexpected error and was skipped.", urls: [], checked: 0, failed: 0, reason: "The check crashed while running." }, score: null }
+    return { result: { ...base, status: "not_checked", severity: def.severity, value: "Not checked", message: "This check hit an unexpected error and was skipped.", urls: [], checked: 0, failed: 0, reason: CRASH_REASON }, score: null }
   }
 }
 
@@ -137,7 +141,8 @@ export function runChecks(input: {
   lighthouse: LighthouseRun[]
   crux: CruxResult | null
   durationSec: number
-}): { scores: AuditScoresV2; payload: AuditPayloadV2; recommendations: RecommendationV2[] } {
+  log?: AuditLogger
+}): { scores: AuditScoresV2; payload: AuditPayloadV2; recommendations: RecommendationV2[]; keywordChecks: KeywordCheck[] } {
   const ctx = buildContext(input)
   const off = disabledChecks()
   const defs = ALL_CHECKS.filter((c) => !off.has(c.id))
@@ -145,10 +150,19 @@ export function runChecks(input: {
   const pageStatuses = new Map<string, Record<string, PageCheckStatus>>()
   const results: CheckResult[] = []
   const contributions = new Map<GroupId, Contribution>()
+  const log = input.log
+  log?.("info", `Running ${defs.length} checks`)
   for (const def of defs) {
     const out = runCheck(def, ctx, pageStatuses)
     if (!out) continue
     results.push(out.result)
+    if (log) {
+      const r = out.result
+      if (r.reason === CRASH_REASON) log("error", `Check crashed: ${r.name}`)
+      else if (r.status === "not_checked") log("info", `Check skipped: ${r.name} (${r.reason ?? r.value})`)
+      else if (r.status === "pass") log("info", `Check passed: ${r.name} (${r.value})`)
+      else log("warn", `Check ${r.status === "fail" ? "failed" : "has a warning"}: ${r.name} (${r.value})`)
+    }
     if (out.score) {
       const c = contributions.get(def.group) ?? { weight: 0, passed: 0 }
       c.weight += out.score.weight
@@ -259,10 +273,20 @@ export function runChecks(input: {
     truncated: crawl.truncated,
     durationSec: input.durationSec,
     confidence,
-    config: { targetKeyword: input.audit.targetKeyword, targetUrl: input.audit.targetUrl, maxPages: AUDIT_CONFIG.maxPages },
+    config: { maxPages: AUDIT_CONFIG.maxPages },
     lighthouse: input.lighthouse,
     crux: input.crux,
   }
 
-  return { scores, payload: { version: 2, checks: results, pages, crawl: summary }, recommendations }
+  /* ---- keyword placement for the pages and keywords entered at the start ---- */
+  const keywordChecks = checkKeywords(ctx, input.audit.keywordPairs)
+  if (keywordChecks.length) {
+    log?.("info", `Checking keyword placement for ${keywordChecks.length} ${keywordChecks.length === 1 ? "page" : "pages"}`)
+    for (const k of keywordChecks) {
+      if (!k.found) log?.("warn", `Keyword page not found during crawl: ${k.url}`)
+      else log?.(k.score >= 3 ? "info" : "warn", `Keyword "${k.keyword}" on ${k.url}: ${k.score}/5`)
+    }
+  }
+
+  return { scores, payload: { version: 2, checks: results, pages, crawl: summary }, recommendations, keywordChecks }
 }

@@ -167,3 +167,450 @@
 .dark .group-hover\:text-primary {
   color: var(--chart-2);
 }
+
+/* ------------------------------------------------------------------------------------------------
+   Proposal document: A4 pages in a slate green and taupe palette.
+   Everything is sized in cqw (1% of the page width), so the page looks the same in the preview, in half
+   a screen next to the editor, and printed at 210mm.
+   ------------------------------------------------------------------------------------------------ */
+.pp-doc {
+  --pp-dark: #3e4f4d;
+  --pp-accent: #b0a394;
+  --pp-ink: #26332f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  color: var(--pp-dark);
+  page: proposal;
+}
+.pp-page {
+  container-type: inline-size;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 210mm;
+  aspect-ratio: 210 / 297;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.06);
+  break-after: page;
+  break-inside: avoid-page;
+}
+.pp-page.pp-dark {
+  background: var(--pp-dark);
+  color: #fff;
+}
+.pp-sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  padding: 6.5cqw 7.5cqw;
+  font-size: 2.15cqw;
+  line-height: 1.55;
+}
+.pp-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+}
+.pp-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 4cqw;
+  font-size: 2.3cqw;
+  line-height: 1.25;
+}
+.pp-top small {
+  display: block;
+  font-size: 1.7cqw;
+  opacity: 0.7;
+}
+.pp-top .pp-date {
+  text-align: right;
+  white-space: nowrap;
+}
+.pp-title {
+  margin: 0;
+  font-size: 7.4cqw;
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+}
+.pp-subtitle {
+  margin: 0;
+  font-size: 3.7cqw;
+  line-height: 1.25;
+  color: var(--pp-accent);
+}
+.pp-arrow {
+  display: inline-block;
+  margin-left: 1.2cqw;
+  font-size: 0.5em;
+  vertical-align: 0.5em;
+}
+.pp-section {
+  margin-top: auto;
+  padding-top: 8cqw;
+  margin-bottom: auto;
+}
+.pp-section > .pp-title {
+  margin-bottom: 4.5cqw;
+}
+.pp-h2 {
+  margin: 6cqw 0 2.5cqw;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  border-bottom: 0.2cqw solid var(--pp-dark);
+  padding-bottom: 2cqw;
+  font-size: 3.4cqw;
+  font-weight: 400;
+  color: var(--pp-dark);
+}
+.pp-ring {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 3.4cqw;
+  height: 3.4cqw;
+  border: 0.2cqw solid var(--pp-dark);
+  border-radius: 999px;
+  font-size: 1.9cqw;
+  line-height: 1;
+}
+
+/* the foot block of the cover and closing page */
+.pp-foot {
+  margin: auto 0 -6.5cqw -7.5cqw;
+  padding: 5.5cqw 7.5cqw;
+  border-top-right-radius: 2.2cqw;
+  background: var(--pp-dark);
+  color: #fff;
+}
+.pp-foot .pp-label {
+  font-size: 2.1cqw;
+  opacity: 0.85;
+}
+.pp-foot .pp-value {
+  font-size: 3cqw;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.pp-photo {
+  display: block;
+  flex: none;
+  object-fit: cover;
+  object-position: 50% 12%;
+}
+
+/* contents page */
+.pp-toc-title {
+  margin: 9cqw 0 5cqw;
+  font-size: 6cqw;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+}
+.pp-toc {
+  margin: 0 0 0 -7.5cqw;
+  padding: 0;
+  list-style: none;
+  border-bottom: 0.15cqw solid rgb(255 255 255 / 0.85);
+}
+.pp-toc li {
+  display: flex;
+  align-items: baseline;
+  gap: 3.5cqw;
+  border-top: 0.15cqw solid rgb(255 255 255 / 0.85);
+  padding: 2.9cqw 0 2.9cqw 7.5cqw;
+  font-size: 2.8cqw;
+}
+.pp-toc li span:first-child {
+  width: 4cqw;
+  color: var(--pp-accent);
+  font-size: 2.6cqw;
+}
+
+/* the text of a section, written in markdown */
+.pp-body {
+  color: var(--pp-ink);
+  font-size: 2.15cqw;
+  line-height: 1.6;
+}
+.pp-body > div > p,
+.pp-body p {
+  margin: 0 0 1.6cqw;
+}
+.pp-body p[role="heading"] {
+  margin: 4cqw 0 1.5cqw;
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: 3cqw;
+  color: var(--pp-dark);
+}
+.pp-body ul,
+.pp-body ol {
+  margin: 1cqw 0 0;
+  padding: 0;
+  list-style: none;
+}
+.pp-body ul li {
+  position: relative;
+  margin: 0 0 2cqw;
+  padding-left: 5.4cqw;
+}
+.pp-body ul li::before {
+  content: "→";
+  position: absolute;
+  top: 0.15cqw;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 3cqw;
+  height: 3cqw;
+  border: 0.2cqw solid var(--pp-dark);
+  border-radius: 999px;
+  font-size: 1.6cqw;
+  line-height: 1;
+}
+.pp-body ol {
+  counter-reset: pp-n;
+}
+.pp-body ol li {
+  margin: 0 0 3cqw;
+  counter-increment: pp-n;
+}
+.pp-body ol li::before {
+  content: counter(pp-n, decimal-leading-zero);
+  display: block;
+  margin-bottom: 0.4cqw;
+  color: var(--pp-accent);
+  font-size: 2.6cqw;
+  line-height: 1.2;
+}
+.pp-body strong {
+  color: var(--pp-dark);
+}
+.pp-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 2cqw;
+  line-height: 1.4;
+}
+.pp-body table th {
+  border: 0;
+  border-bottom: 0.25cqw solid var(--pp-dark);
+  background: none;
+  padding: 1.4cqw 1.5cqw 1.4cqw 0.8cqw;
+  font-weight: 600;
+  color: var(--pp-accent);
+  text-align: left;
+}
+.pp-body table td {
+  border: 0;
+  border-bottom: 0.15cqw solid rgb(62 79 77 / 0.45);
+  padding: 1.9cqw 1.5cqw 1.9cqw 0.8cqw;
+  text-align: left;
+  vertical-align: top;
+}
+.pp-body table tr {
+  break-inside: avoid;
+}
+.pp-body table td strong {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: 2.7cqw;
+}
+.pp-body table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* the executive summary opens with a quotation mark */
+.pp-summary .pp-body > div > p:first-child::before {
+  content: "\201C";
+  display: block;
+  margin-bottom: 1.5cqw;
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: 8cqw;
+  font-weight: 700;
+  line-height: 0.6;
+  color: var(--pp-accent);
+}
+.pp-summary .pp-body {
+  font-size: 2.5cqw;
+  line-height: 1.65;
+  text-align: justify;
+}
+
+.pp-terms {
+  margin-top: 6cqw;
+  max-width: 100%;
+  font-size: 1.7cqw;
+  line-height: 1.5;
+  color: #5d6b68;
+}
+.pp-terms strong {
+  display: block;
+  margin-bottom: 0.6cqw;
+  color: var(--pp-dark);
+}
+.pp-contact {
+  display: grid;
+  gap: 1.8cqw;
+  margin: 2.5cqw 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 2.4cqw;
+}
+.pp-contact li {
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+}
+.pp-contact svg {
+  width: 2.8cqw;
+  height: 2.8cqw;
+  flex: none;
+}
+
+@page proposal {
+  size: A4;
+  margin: 0;
+}
+@media print {
+  .pp-doc {
+    display: block;
+    gap: 0;
+  }
+  .pp-page {
+    width: 210mm;
+    max-width: none;
+    min-height: 297mm;
+    aspect-ratio: auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .pp-sheet {
+    min-height: 297mm;
+  }
+}
+/* the markdown renderer sets its own text size; inside a proposal page the page decides */
+.pp-body > div {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* ------------------------------------------------------------------------------------------------
+   Proposal document: soft gradients and small details. Everything stays inside the page box.
+   ------------------------------------------------------------------------------------------------ */
+.pp-page::before,
+.pp-page::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* a warm glow in the top right corner of every page */
+.pp-page::before {
+  top: 0;
+  right: 0;
+  width: 72cqw;
+  height: 72cqw;
+  background: radial-gradient(circle at 100% 0, rgb(176 163 148 / 0.22), rgb(176 163 148 / 0.07) 38%, transparent 68%);
+}
+/* concentric rings fading out of the corner, on the cover and the closing page */
+.pp-hero::after {
+  top: 0;
+  right: 0;
+  width: 62cqw;
+  height: 62cqw;
+  background: repeating-radial-gradient(circle at 100% 0, transparent 0 4.2cqw, rgb(62 79 77 / 0.1) 4.2cqw 4.4cqw);
+  -webkit-mask-image: radial-gradient(circle at 100% 0, #000 0%, transparent 72%);
+  mask-image: radial-gradient(circle at 100% 0, #000 0%, transparent 72%);
+}
+
+/* the contents page: a deeper green with light pooling in two corners */
+.pp-page.pp-dark {
+  background: linear-gradient(160deg, #475a57 0%, #3e4f4d 52%, #34423f 100%);
+}
+.pp-dark::before {
+  background: radial-gradient(circle at 100% 0, rgb(255 255 255 / 0.13), transparent 62%);
+}
+.pp-dark::after {
+  bottom: 0;
+  left: 0;
+  width: 84cqw;
+  height: 84cqw;
+  background: radial-gradient(circle at 0 100%, rgb(120 150 140 / 0.2), transparent 62%);
+}
+
+/* the dark block on the cover and the closing page */
+.pp-foot {
+  background: linear-gradient(120deg, #374745 0%, #43554f 55%, #51665f 100%);
+  box-shadow: inset 0 0.15cqw 0 rgb(255 255 255 / 0.14);
+}
+.pp-avatar {
+  box-shadow: 0 0 0 0.45cqw rgb(255 255 255 / 0.22), 0 1cqw 2.5cqw rgb(0 0 0 / 0.35);
+}
+
+/* a short gradient bar over the big titles, and the small "01 — Section" label */
+.pp-rule {
+  display: block;
+  width: 9cqw;
+  height: 0.9cqw;
+  margin-bottom: 4cqw;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pp-dark), var(--pp-accent));
+}
+.pp-kicker {
+  display: flex;
+  align-items: center;
+  margin: 0 0 2.4cqw;
+  font-size: 1.8cqw;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pp-accent);
+}
+.pp-kicker::before {
+  content: "";
+  width: 6cqw;
+  height: 0.4cqw;
+  margin-right: 2cqw;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pp-dark), var(--pp-accent));
+}
+
+/* the arrow rings of bullets and sub-headings get a faint fill */
+.pp-body ul li::before,
+.pp-ring {
+  background: linear-gradient(135deg, #fff 0%, #e6ecea 100%);
+}
+
+/* the total row of a table is tinted */
+.pp-body table tbody tr:has(td strong) td {
+  background: rgb(62 79 77 / 0.08);
+}
+.pp-body table tbody tr:has(td strong) td:first-child {
+  border-radius: 1cqw 0 0 1cqw;
+}
+.pp-body table tbody tr:has(td strong) td:last-child {
+  border-radius: 0 1cqw 1cqw 0;
+}
+
+/* page footer: who it is from, and the page number */
+.pp-pagefoot {
+  position: absolute;
+  right: 7.5cqw;
+  bottom: 3.2cqw;
+  left: 7.5cqw;
+  display: flex;
+  justify-content: space-between;
+  gap: 4cqw;
+  border-top: 0.15cqw solid transparent;
+  border-image: linear-gradient(90deg, rgb(62 79 77 / 0.5), rgb(62 79 77 / 0.04)) 1;
+  padding-top: 1.5cqw;
+  font-size: 1.55cqw;
+  color: #7b8985;
+}

@@ -1,14 +1,113 @@
 "use client"
 
-import { Check, Eye, EyeOff, KeyRound, Loader2, Plug } from "lucide-react"
+import { Check, Eye, EyeOff, KeyRound, Loader2, Plug, RefreshCw, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 
 import { toast } from "sonner"
+import type { GeminiModelInfo } from "@/app/api/settings/models/route"
 import { ErrorNote } from "@/components/content/parts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input, Label } from "@/components/ui/input"
+
+function formatTokens(n: number | null) {
+  if (!n) return "context size unknown"
+  return n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}M token context` : `${Math.round(n / 1000)}K token context`
+}
+
+function ModelPicker({ activeModel, onChange, hasKey }: { activeModel: string; onChange: (model: string) => void; hasKey: boolean }) {
+  const [models, setModels] = useState<GeminiModelInfo[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function refresh() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/settings/models", { cache: "no-store" })
+      const body = (await res.json().catch(() => null)) as { models?: GeminiModelInfo[]; current?: string; error?: string } | null
+      if (!res.ok || !body?.models) throw new Error(body?.error ?? `Request failed (${res.status}).`)
+      setModels(body.models)
+      if (body.current) onChange(body.current)
+    } catch (e) {
+      setModels(null)
+      setError(e instanceof Error ? e.message : "Something went wrong.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function select(name: string) {
+    if (name === activeModel || saving) return
+    setSaving(name)
+    try {
+      const res = await fetch("/api/settings/models", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: name }) })
+      const body = (await res.json().catch(() => null)) as { model?: string; error?: string } | null
+      if (!res.ok || !body?.model) throw new Error(body?.error ?? `Request failed (${res.status}).`)
+      onChange(body.model)
+      toast.success(`Now using ${body.model}`)
+    } catch (e) {
+      toast.error("Couldn't switch model", { description: e instanceof Error ? e.message : "Something went wrong." })
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const unavailable = models !== null && !models.some((m) => m.name === activeModel)
+
+  return (
+    <div className="space-y-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-medium">Available Models</h3>
+          <p className="text-xs text-muted-foreground">
+            Active: <span className="font-mono">{activeModel}</span>. Saved as GEMINI_MODEL in .env and applied immediately.
+          </p>
+        </div>
+        <Button variant="outline" onClick={refresh} disabled={loading || !hasKey}>
+          {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />} Refresh Models
+        </Button>
+      </div>
+
+      {error && <ErrorNote message={error} />}
+      {unavailable && (
+        <p role="alert" className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <span>{activeModel} is no longer available for this API key. Pick another model below.</span>
+        </p>
+      )}
+
+      {models && models.length === 0 && <p className="text-sm text-muted-foreground">No suitable text models are available for this API key.</p>}
+      {models && models.length > 0 && (
+            <fieldset className="space-y-1">
+              <legend className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Text generation models</legend>
+              <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
+                {models.map((m) => {
+                  const active = m.name === activeModel
+                  return (
+                    <label key={m.name} className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
+                      <input type="radio" name="gemini-model" className="mt-1" checked={active} onChange={() => select(m.name)} disabled={saving !== null} />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{m.displayName}</span>
+                          {active && <Badge variant="success">Active</Badge>}
+                          {saving === m.name && <Loader2 className="size-3.5 animate-spin" />}
+                        </span>
+                        <span className="block font-mono text-xs text-muted-foreground">
+                          {m.name} · {formatTokens(m.inputTokenLimit)}
+                        </span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
+      )}
+    </div>
+  )
+}
 
 type Test = { state: "idle" } | { state: "running" } | { state: "ok"; model: string } | { state: "error"; message: string }
 
@@ -21,6 +120,7 @@ export function ApiKeysTab({ initialMasked, model }: { initialMasked: string | n
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [test, setTest] = useState<Test>({ state: "idle" })
+  const [activeModel, setActiveModel] = useState(model)
 
   async function save() {
     setSaving(true)
@@ -134,9 +234,7 @@ export function ApiKeysTab({ initialMasked, model }: { initialMasked: string | n
       )}
       {test.state === "error" && <ErrorNote message={test.message} />}
 
-      <p className="border-t border-border pt-4 text-xs text-muted-foreground">
-        Text model: <span className="font-mono">{model}</span> (set GEMINI_MODEL in .env to change it).
-      </p>
+      <ModelPicker activeModel={activeModel} onChange={setActiveModel} hasKey={!!masked} />
     </Card>
   )
 }

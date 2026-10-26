@@ -1,4 +1,4 @@
-import { asRecord, asStringArray } from "@/lib/client-schema"
+import { asOtherLinks, asRecord, asStringArray } from "@/lib/client-schema"
 import { DEFAULT_CATEGORY, PAGE_SIZE, isCategory, type ClientCategory } from "@/lib/constants"
 import { db } from "@/lib/db"
 import type { Prisma } from "@/lib/generated/prisma/client"
@@ -113,6 +113,10 @@ export async function getClient(id: string) {
       .map((t) => t.trim())
       .filter(Boolean),
     notes: client.notes ?? "",
+    facebookUrl: client.facebookUrl,
+    instagramUrl: client.instagramUrl,
+    driveLink: client.driveLink,
+    otherLinks: asOtherLinks(client.otherLinks),
     createdAt: client.createdAt,
     updatedAt: client.updatedAt,
   }

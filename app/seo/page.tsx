@@ -6,6 +6,7 @@ import { connection } from "next/server"
 import { Suspense } from "react"
 
 import { EmptyState } from "@/components/empty-state"
+import { DeleteAudit } from "@/components/seo/delete-audit"
 import { StartAuditButton } from "@/components/seo/start-audit-button"
 import { AuditSkeleton } from "@/components/skeletons"
 import { AuditRunner } from "@/components/seo/audit-runner"
@@ -17,7 +18,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { Card, Eyebrow } from "@/components/ui/card"
 import { getActiveJob } from "@/lib/audit/jobs"
 import { CATEGORIES } from "@/lib/audit/groups"
-import type { AuditPayloadV2, AuditScores, AuditScoresV2, CategoryId, Finding, Recommendation, RecommendationV2 } from "@/lib/audit/types"
+import type { AuditPayloadV2, AuditScores, AuditScoresV2, CategoryId, Finding, KeywordCheck, LogEntry, Recommendation, RecommendationV2 } from "@/lib/audit/types"
 import { getClient } from "@/lib/clients"
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
 import { db } from "@/lib/db"
@@ -43,12 +44,22 @@ export default function SeoPage(props: PageProps<"/seo">) {
 
 /** Audits come in two shapes: the older four-category audit and the current ten-group audit. */
 type AuditRow = { id: string; createdAt: Date; overall: number; high: number; other: number } & (
-  | { kind: "v2"; scores: AuditScoresV2; payload: AuditPayloadV2; recommendations: RecommendationV2[] }
+  | { kind: "v2"; scores: AuditScoresV2; payload: AuditPayloadV2; recommendations: RecommendationV2[]; keywordChecks: KeywordCheck[]; log: LogEntry[] }
   | { kind: "v1"; scores: AuditScores; findings: Finding[]; recommendations: Recommendation[] }
 )
 
+/** The log and keyword results are stored as JSON text; a damaged value reads as empty. */
+function parseList<T>(raw: string): T[] {
+  try {
+    const v = JSON.parse(raw)
+    return Array.isArray(v) ? (v as T[]) : []
+  } catch {
+    return []
+  }
+}
+
 /** Stored JSON back to typed values; rows of an unknown shape are skipped rather than crashing the page. */
-function hydrate(row: { id: string; createdAt: Date; scores: unknown; findings: unknown; recommendations: unknown }): AuditRow | null {
+function hydrate(row: { id: string; createdAt: Date; scores: unknown; findings: unknown; recommendations: unknown; log: string; keywordChecks: string }): AuditRow | null {
   const s = row.scores as { version?: number; overall?: number } | null
   if (!s || typeof s.overall !== "number") return null
 
@@ -65,6 +76,8 @@ function hydrate(row: { id: string; createdAt: Date; scores: unknown; findings: 
       scores: row.scores as AuditScoresV2,
       payload,
       recommendations,
+      keywordChecks: parseList<KeywordCheck>(row.keywordChecks),
+      log: parseList<LogEntry>(row.log),
     }
   }
 
@@ -135,7 +148,7 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
             )}
           </p>
           {selected.kind === "v2" ? (
-            <ReportView key={selected.id} auditId={selected.id} scores={selected.scores} payload={selected.payload} recommendations={selected.recommendations} />
+            <ReportView key={selected.id} auditId={selected.id} scores={selected.scores} payload={selected.payload} recommendations={selected.recommendations} keywordChecks={selected.keywordChecks} log={selected.log} />
           ) : (
             <>
               <LegacyScoreCards audit={selected} />
@@ -160,7 +173,7 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
         </EmptyState>
       )}
 
-      {rows.length > 0 && <History rows={rows} selectedId={selected?.id ?? null} website={client.website} />}
+      {rows.length > 0 && <History rows={rows} selectedId={selected?.id ?? null} website={client.website} clientId={client.id} />}
     </div>
   )
 }
@@ -231,12 +244,15 @@ function LegacyScoreCards({ audit }: { audit: Extract<AuditRow, { kind: "v1" }> 
 
 /* ------------------------------------------------------------------ history */
 
-function History({ rows, selectedId, website }: { rows: AuditRow[]; selectedId: string | null; website: string | null }) {
+function History({ rows, selectedId, website, clientId }: { rows: AuditRow[]; selectedId: string | null; website: string | null; clientId: string }) {
   return (
     <section aria-label="Audit history" className="space-y-3">
-      <div>
-        <h2 className="font-semibold">Audit history</h2>
-        <p className="text-sm text-muted-foreground">Crawl log{website ? ` for ${website.replace(/^https?:\/\//, "")}` : ""}, latest {rows.length} {rows.length === 1 ? "run" : "runs"}.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Audit history</h2>
+          <p className="text-sm text-muted-foreground">Crawl log{website ? ` for ${website.replace(/^https?:\/\//, "")}` : ""}, latest {rows.length} {rows.length === 1 ? "run" : "runs"}.</p>
+        </div>
+        <DeleteAudit clientId={clientId} count={rows.length} label="this client" />
       </div>
       <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-foreground/10">
         <table className="w-full min-w-[640px] text-sm">
@@ -268,9 +284,12 @@ function History({ rows, selectedId, website }: { rows: AuditRow[]; selectedId: 
                   <td className="px-4 py-3 text-destructive tabular-nums">{r.high}</td>
                   <td className="px-4 py-3 text-amber-600 tabular-nums dark:text-amber-400">{r.other}</td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/seo?audit=${r.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                      {r.id === selectedId ? "Viewing" : "View"}
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/seo?audit=${r.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                        {r.id === selectedId ? "Viewing" : "View"}
+                      </Link>
+                      <DeleteAudit auditId={r.id} label={stamp(r.createdAt)} viewing={r.id === selectedId} />
+                    </div>
                   </td>
                 </tr>
               )

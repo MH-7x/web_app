@@ -13,7 +13,7 @@ import {
 } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import type { Prisma } from "@/lib/generated/prisma/client"
-import { GEMINI_MODEL, GeminiError } from "@/lib/gemini"
+import { GeminiError, getModelName } from "@/lib/gemini"
 
 export type GenerateResponse<T extends ContentType = ContentType> = {
   id: string
@@ -68,7 +68,7 @@ export async function handleGenerate<T extends ContentType>(
         subtype: SUBTYPE[type](options as never),
         language,
         ...toColumns(type, result),
-        metadata: { options, model: GEMINI_MODEL, result } as unknown as Prisma.InputJsonValue,
+        metadata: { options, model: getModelName(), result } as unknown as Prisma.InputJsonValue,
       },
     })
 

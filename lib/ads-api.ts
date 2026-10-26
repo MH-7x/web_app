@@ -5,7 +5,7 @@ import { getClient, type ClientDetail } from "@/lib/clients"
 import { BadRequestError, parseLanguage, type Language } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import type { Prisma } from "@/lib/generated/prisma/client"
-import { GEMINI_MODEL, GeminiError } from "@/lib/gemini"
+import { GeminiError, getModelName } from "@/lib/gemini"
 import { generateFacebookAds } from "@/lib/generators/ads"
 
 export type AdsResponse = {
@@ -47,7 +47,7 @@ export async function handleFacebook(request: Request) {
         subtype: `${req.objective} · ${req.emirates.length > 1 ? "all emirates" : req.emirates[0]}`,
         language,
         ...adsColumns(result),
-        metadata: { request: req, model: GEMINI_MODEL, result } as unknown as Prisma.InputJsonValue,
+        metadata: { request: req, model: getModelName(), result } as unknown as Prisma.InputJsonValue,
       },
     })
 

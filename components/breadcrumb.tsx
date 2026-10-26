@@ -6,14 +6,16 @@ import { usePathname } from "next/navigation"
 
 const LABELS: Record<string, string> = {
   clients: "Clients",
-  new: "Add Client",
+  new: "New",
   edit: "Edit",
   content: "Content",
   ads: "Facebook Ads",
   "gbp-posts": "GBP Posts",
   seo: "SEO Audit",
+  keywords: "Keywords",
   humanizer: "Humanizer",
   reports: "Reports",
+  proposals: "Proposals",
   settings: "Settings",
 }
 
@@ -25,6 +27,8 @@ export function Breadcrumb() {
     const href = `/${segments.slice(0, i + 1).join("/")}`
     // /clients/<id> is an opaque id
     if (segments[0] === "clients" && i === 1 && segment !== "new") crumbs.push({ label: "Client Details", href })
+    else if (segments[0] === "proposals" && i === 1 && segment !== "new") crumbs.push({ label: "Project", href })
+    else if (segment === "new") crumbs.push({ label: segments[0] === "proposals" ? "New Project" : "Add Client", href })
     else crumbs.push({ label: LABELS[segment] ?? segment, href })
   })
 

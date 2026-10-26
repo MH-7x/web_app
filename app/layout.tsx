@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist_Mono, Inter } from "next/font/google"
+import { Geist_Mono, Inter, Space_Grotesk } from "next/font/google"
 import "./globals.css"
 
 import { Suspense } from "react"
@@ -11,6 +11,9 @@ import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+
+/** The heading face of the proposal document. */
+const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display", weight: ["400", "500", "700"] })
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -25,7 +28,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // suppressHydrationWarning: the init script adds the "dark" class before React hydrates
-    <html lang="en" suppressHydrationWarning className={cn("h-full antialiased font-sans", geistMono.variable, inter.variable)}>
+    <html lang="en" suppressHydrationWarning className={cn("h-full antialiased font-sans", geistMono.variable, inter.variable, display.variable)}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

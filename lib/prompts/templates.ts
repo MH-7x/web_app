@@ -10,9 +10,10 @@ import type { ClientCategory } from "@/lib/constants"
 import { FB_EXAMPLES_AR, FB_EXAMPLES_EN } from "@/lib/prompts/fb-examples"
 import { GBP_EXAMPLES_AR, GBP_EXAMPLES_EN } from "@/lib/prompts/gbp-examples"
 import { HUMANIZER_RULES, SCORER_SYSTEM_PROMPT } from "@/lib/prompts/humanizer"
+import { PROPOSAL_SYSTEM_PROMPT } from "@/lib/prompts/proposal"
 import { REPORT_SYSTEM_PROMPT } from "@/lib/prompts/report"
 
-export type TemplateName = "gbp-description" | "faq-generation" | "blog-post" | "meta-tags" | "fb-ad" | "gbp-posts" | "humanizer" | "humanizer-scorer" | "report"
+export type TemplateName = "gbp-description" | "faq-generation" | "blog-post" | "meta-tags" | "fb-ad" | "gbp-posts" | "humanizer" | "humanizer-scorer" | "report" | "proposal"
 
 export type TemplateVariable = { name: string; description: string }
 
@@ -337,6 +338,14 @@ Company details:
     description: "The narrative monthly performance report.",
     variables: [CATEGORY_CONTEXT, EXAMPLES],
     systemPrompt: REPORT_SYSTEM_PROMPT,
+    examples: [],
+  },
+  {
+    name: "proposal",
+    label: "Website Proposal",
+    description: "The client proposal for a website project. The header, date and terms and conditions are added around it automatically.",
+    variables: [{ name: "business_name", description: "Your business name from Settings → General" }, EXAMPLES],
+    systemPrompt: PROPOSAL_SYSTEM_PROMPT,
     examples: [],
   },
 ]

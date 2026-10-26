@@ -5,8 +5,12 @@ import {
   type ResponseSchema,
 } from "@google/generative-ai"
 
-/** gemini-2.5-pro unless GEMINI_MODEL in .env overrides it (e.g. when the account has lost access to a model). */
-export const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-pro"
+export const DEFAULT_GEMINI_MODEL = "gemini-2.5-pro"
+
+/** GEMINI_MODEL from .env, else gemini-2.5-pro. Read on every call so a model picked in Settings applies at once. */
+export function getModelName() {
+  return process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL
+}
 
 const REQUEST_TIMEOUT_MS = 120_000
 const MAX_RETRIES = 3
@@ -59,11 +63,11 @@ type ModelOptions = {
   temperature?: number
 }
 
-/** A gemini-2.5-pro model instance. */
+/** A model instance for the configured GEMINI_MODEL. */
 export function getGeminiModel({ systemInstruction, json, temperature }: ModelOptions = {}) {
   return getGeminiClient().getGenerativeModel(
     {
-      model: GEMINI_MODEL,
+      model: getModelName(),
       ...(systemInstruction ? { systemInstruction } : {}),
       generationConfig: {
         ...(temperature !== undefined ? { temperature } : {}),
@@ -81,11 +85,11 @@ function classify(error: unknown): GeminiError {
   if (error instanceof GoogleGenerativeAIFetchError) {
     const { status } = error
     if (status === 404) {
-      return new GeminiError("model_unavailable", `${GEMINI_MODEL} is not available for this API key. Set GEMINI_MODEL in .env to a model your key can use, then restart the server.`, 502)
+      return new GeminiError("model_unavailable", `${getModelName()} is not available for this API key. Pick a model your key can use in Settings → API Keys.`, 502)
     }
     // a daily quota will not recover by retrying, so fail fast with an actionable message
     if (status === 429 && /PerDay/i.test(JSON.stringify(error.errorDetails ?? []) + error.message)) {
-      return new GeminiError("quota_exhausted", `The daily Gemini quota for ${GEMINI_MODEL} is used up on this API key (free tier). Enable billing on the key's Google project, or set GEMINI_MODEL in .env to a different model.`, 429)
+      return new GeminiError("quota_exhausted", `The daily Gemini quota for ${getModelName()} is used up on this API key (free tier). Enable billing on the key's Google project, or pick a different model in Settings → API Keys.`, 429)
     }
     if (status === 429) return new GeminiError("rate_limited", "Gemini is rate limiting requests. Wait a moment and try again.", 429, true)
     if (status === 401 || status === 403 || (status === 400 && /api key/i.test(error.message))) {

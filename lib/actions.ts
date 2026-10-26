@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 
 import {
+  asOtherLinks,
   asRecord,
   normalizeWebsite,
   slugify,
@@ -46,6 +47,10 @@ function sanitize(raw: unknown): ClientInput {
     tones: strList(r.tones),
     notes: str(r.notes).trim(),
     initialSetup: strList(r.initialSetup),
+    facebookUrl: str(r.facebookUrl).trim(),
+    instagramUrl: str(r.instagramUrl).trim(),
+    driveLink: str(r.driveLink).trim(),
+    otherLinks: asOtherLinks(r.otherLinks).map((l) => ({ label: l.label.trim(), url: l.url.trim() })),
   }
 }
 
@@ -75,6 +80,10 @@ function toColumns(input: ClientInput) {
     brandColors: { primary: input.primaryColor, secondary: input.secondaryColor },
     tone: input.tones.join(", ") || null,
     notes: input.notes || null,
+    facebookUrl: normalizeWebsite(input.facebookUrl),
+    instagramUrl: normalizeWebsite(input.instagramUrl),
+    driveLink: normalizeWebsite(input.driveLink),
+    otherLinks: input.otherLinks.filter((l) => l.url).map((l) => ({ label: l.label, url: normalizeWebsite(l.url) })),
   }
 }
 

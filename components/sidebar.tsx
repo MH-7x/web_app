@@ -3,6 +3,7 @@
 import {
   BarChart3,
   CalendarDays,
+  KeyRound,
   FileText,
   LayoutDashboard,
   Megaphone,
@@ -24,8 +25,10 @@ const NAV = [
   { href: "/ads", label: "Facebook Ads", icon: Megaphone },
   { href: "/gbp-posts", label: "GBP Posts", icon: CalendarDays },
   { href: "/seo", label: "SEO Audit", icon: Search },
+  { href: "/keywords", label: "Keywords", icon: KeyRound },
   { href: "/humanizer", label: "Humanizer", icon: Wand2 },
   { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/proposals", label: "Proposals", icon: FileText },
 ] as const
 
 function NavLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Users; active: boolean }) {

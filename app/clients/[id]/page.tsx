@@ -24,6 +24,7 @@ import { Suspense } from "react"
 import { EmptyState } from "@/components/empty-state"
 import { ClientDetailSkeleton } from "@/components/skeletons"
 import { ClientAvatar } from "@/components/client-avatar"
+import { MessageBuilder } from "@/components/clients/message-builder"
 import { CopyButton } from "@/components/copy-button"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
 import { DisconnectGbpButton } from "@/components/gbp/disconnect-button"
@@ -296,6 +297,26 @@ function Overview({
       </div>
 
       <div className="space-y-5">
+        <Card>
+          <CardHeader className="border-b border-border pb-3">
+            <CardTitle>
+              <MessageCircle className="size-4 text-primary" /> Client Message
+            </CardTitle>
+            <Eyebrow>WhatsApp</Eyebrow>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <MessageBuilder
+              clientName={client.name}
+              whatsapp={whatsappDigits}
+              website={client.website}
+              facebookUrl={client.facebookUrl}
+              instagramUrl={client.instagramUrl}
+              driveLink={client.driveLink}
+              otherLinks={client.otherLinks}
+            />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="border-b border-border pb-3">
             <CardTitle>

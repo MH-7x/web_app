@@ -40,8 +40,6 @@ export type Ctx = {
   lookup: Map<string, CrawledPage>
   address: { found: string | null; sources: string[] }
   isServiceArea: boolean
-  /** target page for keyword checks */
-  targetPage: CrawledPage | undefined
 }
 
 /** What one page contributes to a page check. `null` from the test means the check does not apply to that page. */
@@ -197,9 +195,6 @@ export function buildContext(input: {
 
   const address = discoverAddress(html)
 
-  const targetUrl = input.audit.targetUrl
-  const targetPage = targetUrl ? (lookup.get(targetUrl.replace(/\/+$/, "")) ?? lookup.get(targetUrl) ?? html.find((p) => p.url.replace(/\/+$/, "") === targetUrl.replace(/\/+$/, ""))) : home
-
   return {
     crawl,
     client,
@@ -217,7 +212,6 @@ export function buildContext(input: {
     lookup,
     address,
     isServiceArea: address.found === null,
-    targetPage,
   }
 }
 

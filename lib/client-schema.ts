@@ -18,7 +18,13 @@ export type ClientInput = {
   tones: string[]
   notes: string
   initialSetup: string[]
+  facebookUrl: string
+  instagramUrl: string
+  driveLink: string
+  otherLinks: OtherLink[]
 }
+
+export type OtherLink = { label: string; url: string }
 
 export type FieldErrors = Partial<Record<keyof ClientInput, string>>
 
@@ -40,11 +46,15 @@ export const EMPTY_CLIENT: ClientInput = {
   tones: [],
   notes: "",
   initialSetup: [],
+  facebookUrl: "",
+  instagramUrl: "",
+  driveLink: "",
+  otherLinks: [],
 }
 
 export const STEP_FIELDS: (keyof ClientInput)[][] = [
   ["category", "name", "nameAr", "emirate", "emiratesServed", "website", "phone", "whatsapp", "areas", "services"],
-  ["primaryColor", "secondaryColor"],
+  ["primaryColor", "secondaryColor", "facebookUrl", "instagramUrl", "driveLink", "otherLinks"],
   [],
 ]
 
@@ -75,6 +85,17 @@ export function normalizeWebsite(raw: string) {
   const value = raw.trim()
   if (!value) return ""
   return /^https?:\/\//i.test(value) ? value : `https://${value}`
+}
+
+/** True when `raw` is empty or parses as a URL with a real hostname (a missing scheme is tolerated). */
+export function isValidUrl(raw: string) {
+  const value = raw.trim()
+  if (!value) return true
+  try {
+    return new URL(normalizeWebsite(value)).hostname.includes(".")
+  } catch {
+    return false
+  }
 }
 
 export function displayDomain(url: string | null | undefined) {
@@ -136,12 +157,26 @@ export function validateClient(input: ClientInput, fields?: (keyof ClientInput)[
   check("primaryColor", !HEX.test(input.primaryColor) ? "Use a hex color like #0f766e." : null)
   check("secondaryColor", !HEX.test(input.secondaryColor) ? "Use a hex color like #e2e8f0." : null)
 
+  check("facebookUrl", !isValidUrl(input.facebookUrl) ? "Enter a valid Facebook page URL." : null)
+  check("instagramUrl", !isValidUrl(input.instagramUrl) ? "Enter a valid Instagram page URL." : null)
+  check("driveLink", !isValidUrl(input.driveLink) ? "Enter a valid Google Drive link." : null)
+  check("otherLinks", input.otherLinks.some((l) => !isValidUrl(l.url)) ? "One of the other links is not a valid URL." : null)
+
   return errors
 }
 
 /** Plain JSON-column values -> typed arrays/objects. */
 export function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []
+}
+
+/** Stored JSON -> [{label, url}], dropping anything malformed. */
+export function asOtherLinks(value: unknown): OtherLink[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((v) => {
+    const r = asRecord(v)
+    return typeof r.url === "string" && r.url.trim() ? [{ label: typeof r.label === "string" ? r.label : "", url: r.url }] : []
+  })
 }
 
 export function asRecord(value: unknown): Record<string, unknown> {

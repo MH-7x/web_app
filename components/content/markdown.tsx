@@ -26,6 +26,10 @@ function inline(text: string): ReactNode[] {
   return out
 }
 
+const cells = (line: string) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim())
+const isTableRow = (line: string) => line.trim().startsWith("|") && line.indexOf("|", line.indexOf("|") + 1) > 0
+const isDivider = (line: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line)
+
 export function Markdown({ source }: { source: string }) {
   const blocks: ReactNode[] = []
   const lines = source.replace(/\r\n/g, "\n").split("\n")
@@ -36,6 +40,47 @@ export function Markdown({ source }: { source: string }) {
     const line = lines[i]
     if (!line.trim()) {
       i++
+      continue
+    }
+
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+      blocks.push(<hr key={key++} className="my-4 border-black/20" />)
+      i++
+      continue
+    }
+
+    if (isTableRow(line) && i + 1 < lines.length && isDivider(lines[i + 1])) {
+      const head = cells(line)
+      const align = cells(lines[i + 1]).map((c) => (c.endsWith(":") ? (c.startsWith(":") ? "text-center" : "text-right") : "text-left"))
+      i += 2
+      const body: string[][] = []
+      while (i < lines.length && isTableRow(lines[i])) body.push(cells(lines[i++]))
+      blocks.push(
+        <div key={key++} className="mt-3 overflow-x-auto">
+          <table dir="auto" className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                {head.map((h, n) => (
+                  <th key={n} className={`border border-black/20 bg-black/5 px-3 py-1.5 font-semibold ${align[n] ?? "text-left"}`}>
+                    {inline(h)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {body.map((row, r) => (
+                <tr key={r}>
+                  {head.map((_, n) => (
+                    <td key={n} className={`border border-black/20 px-3 py-1.5 align-top ${align[n] ?? "text-left"}`}>
+                      {inline(row[n] ?? "")}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
       continue
     }
 
@@ -70,7 +115,7 @@ export function Markdown({ source }: { source: string }) {
     }
 
     const para: string[] = []
-    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|\s*([-*]|\d+[.)])\s+)/.test(lines[i])) para.push(lines[i++])
+    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|\s*([-*]|\d+[.)])\s+)/.test(lines[i]) && !isTableRow(lines[i])) para.push(lines[i++])
     blocks.push(
       <p key={key++} dir="auto" className="mt-3 first:mt-0">
         {para.map((p, n) => (
