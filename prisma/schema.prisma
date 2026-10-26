@@ -29,6 +29,9 @@ model Client {
   driveLink      String             @default("") // Google Drive folder with the client's assets
   otherLinks     Json               @default("[]") // [{label, url}] e.g. TikTok, LinkedIn
   apiCredentials Json? // Google OAuth tokens per service
+  clientNotes    String             @default("[]") // JSON [{id, text, pinned, createdAt}]: quick notes shown on the client page
+  companyProfile String             @default("") // the company's full profile (services, selling points, fleet...), fed to the generators
+  onboardingChecklist String        @default("[]") // JSON [{id, label, section, checked, checkedAt, isCustom}]: setup tasks; empty until first seeded
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   content        GeneratedContent[]
@@ -166,4 +169,12 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+/// A competitor page read for the landing page generator, cached per URL so the same page is not crawled again for 30 days.
+model CompetitorPage {
+  id        String   @id @default(cuid())
+  url       String   @unique // normalized: no hash, no trailing slash
+  data      String   @default("{}") // JSON: the page's structure and capped text, see lib/competitor-types.ts
+  fetchedAt DateTime @default(now())
 }

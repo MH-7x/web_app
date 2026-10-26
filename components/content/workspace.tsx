@@ -1,29 +1,48 @@
 "use client"
 
-import { Building2, Code2, FileText, HelpCircle, Store } from "lucide-react"
+import { Building2, Code2, FileText, HelpCircle, LayoutTemplate, Store } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
 import { BlogPanel } from "@/components/content/blog-panel"
 import { FaqPanel } from "@/components/content/faq-panel"
 import { GbpPanel } from "@/components/content/gbp-panel"
+import { LandingPagePanel } from "@/components/content/landing-page-panel"
 import { MetaPanel } from "@/components/content/meta-panel"
 import { TYPE_TITLES } from "@/components/content/parts"
 import { Badge } from "@/components/ui/badge"
 import type { ContentType } from "@/lib/content-types"
 import { cn } from "@/lib/utils"
 
-export type WorkspaceClient = { id: string; name: string; slug: string; emirate: string; areas: string[]; services: string[] }
+export type WorkspaceClient = {
+  id: string
+  name: string
+  slug: string
+  emirate: string
+  /** the primary emirate first, then the others served */
+  emirates: string[]
+  areas: string[]
+  services: string[]
+  phone: string
+  whatsapp: string
+  primaryColor: string
+  hasCompanyProfile: boolean
+}
 
-const TABS: { id: ContentType; icon: typeof Store }[] = [
+type TabId = ContentType | "landing"
+
+const TITLES: Record<TabId, string> = { ...TYPE_TITLES, landing: "Landing Page" }
+
+const TABS: { id: TabId; icon: typeof Store }[] = [
   { id: "gbp", icon: Store },
   { id: "faq", icon: HelpCircle },
   { id: "blog", icon: FileText },
   { id: "meta", icon: Code2 },
+  { id: "landing", icon: LayoutTemplate },
 ]
 
 export function ContentWorkspace({ client }: { client: WorkspaceClient }) {
-  const [tab, setTab] = useState<ContentType>("gbp")
+  const [tab, setTab] = useState<TabId>("gbp")
 
   return (
     <div className="space-y-5">
@@ -42,7 +61,7 @@ export function ContentWorkspace({ client }: { client: WorkspaceClient }) {
         </div>
       </div>
 
-      <div role="tablist" aria-label="Content type" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 sm:grid-cols-4">
+      <div role="tablist" aria-label="Content type" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 sm:grid-cols-5">
         {TABS.map(({ id, icon: Icon }) => (
           <button
             key={id}
@@ -66,7 +85,7 @@ export function ContentWorkspace({ client }: { client: WorkspaceClient }) {
             )}
           >
             <Icon />
-            {TYPE_TITLES[id]}
+            {TITLES[id]}
           </button>
         ))}
       </div>
@@ -83,6 +102,9 @@ export function ContentWorkspace({ client }: { client: WorkspaceClient }) {
       </div>
       <div id="panel-meta" role="tabpanel" aria-labelledby="tab-meta" hidden={tab !== "meta"}>
         <MetaPanel client={client} />
+      </div>
+      <div id="panel-landing" role="tabpanel" aria-labelledby="tab-landing" hidden={tab !== "landing"}>
+        <LandingPagePanel client={client} />
       </div>
     </div>
   )

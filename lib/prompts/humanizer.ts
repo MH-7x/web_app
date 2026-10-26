@@ -1,20 +1,10 @@
 import type { Strictness } from "@/lib/humanizer-types"
 
 /**
- * The humanizer rules: the "humanizer" skill (v2.5.1, based on Wikipedia's "Signs of AI writing"),
- * condensed to what the model needs. Word lists are kept in full; the long before/after samples are trimmed to one each.
+ * The patterns that make text read as machine-written, with the voice guidance that fixes them. Shared by the humanizer
+ * (which removes them from existing text) and the landing page generator (which avoids them while writing).
  */
-export const HUMANIZER_RULES = `You are a writing editor who removes the signs of AI-generated text so it reads as natural, human writing.
-
-YOUR TASK
-1. Find the AI patterns listed below.
-2. Rewrite the problem sections with natural alternatives.
-3. Keep the meaning and the facts exactly as they are.
-4. Keep the intended tone (formal, casual, technical) and the language of the text.
-5. Add a human voice. Do not only delete the bad patterns.
-6. Finish with an anti-AI pass: ask yourself "What makes this so obviously AI generated?", note the remaining tells briefly, then revise to remove them.
-
-PERSONALITY AND SOUL
+export const AI_WRITING_PATTERNS = `PERSONALITY AND SOUL
 Clean but voiceless writing is as obvious as slop. Signs of soulless writing: every sentence the same length and shape, no opinions, no acknowledgement of uncertainty, no first person where it fits, no edge, reads like a press release.
 - Vary the rhythm. Short punchy sentences, then longer ones that take their time.
 - Be specific instead of general. Prefer a concrete detail to an abstract claim.
@@ -59,7 +49,23 @@ FILLER AND HEDGING
 26. Hyphenated word-pair overuse: third-party, cross-functional, client-facing, data-driven, decision-making, well-known, high-quality, real-time, long-term, end-to-end. Do not hyphenate them with perfect consistency.
 27. Persuasive authority tropes: the real question is, at its core, in reality, what really matters, fundamentally, the deeper issue, the heart of the matter.
 28. Signposting: Let's dive in, let's explore, let's break this down, here's what you need to know, without further ado. Just say the thing.
-29. Fragmented headers: a heading followed by a one-line paragraph that only restates it. Delete the paragraph.
+29. Fragmented headers: a heading followed by a one-line paragraph that only restates it. Delete the paragraph.`
+
+/**
+ * The humanizer rules: the "humanizer" skill (v2.5.1, based on Wikipedia's "Signs of AI writing"),
+ * condensed to what the model needs. Word lists are kept in full; the long before/after samples are trimmed to one each.
+ */
+export const HUMANIZER_RULES = `You are a writing editor who removes the signs of AI-generated text so it reads as natural, human writing.
+
+YOUR TASK
+1. Find the AI patterns listed below.
+2. Rewrite the problem sections with natural alternatives.
+3. Keep the meaning and the facts exactly as they are.
+4. Keep the intended tone (formal, casual, technical) and the language of the text.
+5. Add a human voice. Do not only delete the bad patterns.
+6. Finish with an anti-AI pass: ask yourself "What makes this so obviously AI generated?", note the remaining tells briefly, then revise to remove them.
+
+${AI_WRITING_PATTERNS}
 
 EXAMPLES
 Before: "Nestled within the breathtaking region of Gonder, Alamata Raya Kobo stands as a vibrant town with a rich cultural heritage."

@@ -124,7 +124,11 @@
   body {
     @apply bg-background text-foreground;
   }
-  button:not(:disabled), [role="button"]:not(:disabled), select:not(:disabled), summary, label:has(input[type="checkbox"], input[type="radio"]) {
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  select:not(:disabled),
+  summary,
+  label:has(input[type="checkbox"], input[type="radio"]) {
     cursor: pointer;
   }
   html {
@@ -194,7 +198,9 @@
   aspect-ratio: 210 / 297;
   border-radius: 0.5rem;
   background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.06);
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.12),
+    0 0 0 1px rgb(0 0 0 / 0.06);
   break-after: page;
   break-inside: avoid-page;
 }
@@ -517,7 +523,12 @@
   right: 0;
   width: 72cqw;
   height: 72cqw;
-  background: radial-gradient(circle at 100% 0, rgb(176 163 148 / 0.22), rgb(176 163 148 / 0.07) 38%, transparent 68%);
+  background: radial-gradient(
+    circle at 100% 0,
+    rgb(176 163 148 / 0.22),
+    rgb(176 163 148 / 0.07) 38%,
+    transparent 68%
+  );
 }
 /* concentric rings fading out of the corner, on the cover and the closing page */
 .pp-hero::after {
@@ -525,8 +536,16 @@
   right: 0;
   width: 62cqw;
   height: 62cqw;
-  background: repeating-radial-gradient(circle at 100% 0, transparent 0 4.2cqw, rgb(62 79 77 / 0.1) 4.2cqw 4.4cqw);
-  -webkit-mask-image: radial-gradient(circle at 100% 0, #000 0%, transparent 72%);
+  background: repeating-radial-gradient(
+    circle at 100% 0,
+    transparent 0 4.2cqw,
+    rgb(62 79 77 / 0.1) 4.2cqw 4.4cqw
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at 100% 0,
+    #000 0%,
+    transparent 72%
+  );
   mask-image: radial-gradient(circle at 100% 0, #000 0%, transparent 72%);
 }
 
@@ -535,14 +554,22 @@
   background: linear-gradient(160deg, #475a57 0%, #3e4f4d 52%, #34423f 100%);
 }
 .pp-dark::before {
-  background: radial-gradient(circle at 100% 0, rgb(255 255 255 / 0.13), transparent 62%);
+  background: radial-gradient(
+    circle at 100% 0,
+    rgb(255 255 255 / 0.13),
+    transparent 62%
+  );
 }
 .pp-dark::after {
   bottom: 0;
   left: 0;
   width: 84cqw;
   height: 84cqw;
-  background: radial-gradient(circle at 0 100%, rgb(120 150 140 / 0.2), transparent 62%);
+  background: radial-gradient(
+    circle at 0 100%,
+    rgb(120 150 140 / 0.2),
+    transparent 62%
+  );
 }
 
 /* the dark block on the cover and the closing page */
@@ -551,7 +578,9 @@
   box-shadow: inset 0 0.15cqw 0 rgb(255 255 255 / 0.14);
 }
 .pp-avatar {
-  box-shadow: 0 0 0 0.45cqw rgb(255 255 255 / 0.22), 0 1cqw 2.5cqw rgb(0 0 0 / 0.35);
+  box-shadow:
+    0 0 0 0.45cqw rgb(255 255 255 / 0.22),
+    0 1cqw 2.5cqw rgb(0 0 0 / 0.35);
 }
 
 /* a short gradient bar over the big titles, and the small "01 — Section" label */
@@ -609,7 +638,12 @@
   justify-content: space-between;
   gap: 4cqw;
   border-top: 0.15cqw solid transparent;
-  border-image: linear-gradient(90deg, rgb(62 79 77 / 0.5), rgb(62 79 77 / 0.04)) 1;
+  border-image: linear-gradient(
+      90deg,
+      rgb(62 79 77 / 0.5),
+      rgb(62 79 77 / 0.04)
+    )
+    1;
   padding-top: 1.5cqw;
   font-size: 1.55cqw;
   color: #7b8985;

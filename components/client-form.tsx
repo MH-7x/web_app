@@ -12,6 +12,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/input"
 import { createClientAction, updateClientAction } from "@/lib/actions"
 import {
   EMPTY_CLIENT,
+  MAX_COMPANY_PROFILE,
   STEP_FIELDS,
   validateClient,
   type ClientInput,
@@ -24,7 +25,7 @@ import { cn } from "@/lib/utils"
 
 const STEPS = [
   { title: "Company Info", hint: "Emirate, coverage & contacts" },
-  { title: "Brand & Style", hint: "Tone, colors & links" },
+  { title: "Brand & Style", hint: "Tone, profile & links" },
   { title: "Initial Setup", hint: "What to generate first" },
 ] as const
 
@@ -653,6 +654,23 @@ function BrandStep({ values, errors, set }: StepProps) {
 
       <Field label="Internal Operating Notes" hint="Anything the writers should know (client requests, operating constraints).">
         {(p) => <Textarea {...p} value={values.notes} onChange={(e) => set("notes", e.target.value)} placeholder="e.g. Client wants the WhatsApp button prominent on all ad copy." rows={4} />}
+      </Field>
+    </Section>
+    <Section title="Company Profile" description="Everything the client has told you about the business. The landing page generator and other content tools use it so the copy carries real details.">
+      <Field
+        label="Company Profile"
+        error={errors.companyProfile}
+        hint={`${values.companyProfile.length.toLocaleString("en-US")} / ${MAX_COMPANY_PROFILE.toLocaleString("en-US")} characters. Paste it from WhatsApp, a brochure or the client's own notes.`}
+      >
+        {(p) => (
+          <Textarea
+            {...p}
+            value={values.companyProfile}
+            onChange={(e) => set("companyProfile", e.target.value)}
+            placeholder="Paste the company's full profile: services, selling points, years of experience, fleet details, certifications, pricing advantages, customer testimonials..."
+            rows={12}
+          />
+        )}
       </Field>
     </Section>
     <LinksSection values={values} errors={errors} set={set} />

@@ -43,5 +43,22 @@ async function ActiveClientWorkspace() {
   }
 
   // key resets every tab's output when the active client changes
-  return <ContentWorkspace key={client.id} client={{ id: client.id, name: client.name, slug: client.slug, emirate: client.emirate, areas: client.areas, services: client.services }} />
+  return (
+    <ContentWorkspace
+      key={client.id}
+      client={{
+        id: client.id,
+        name: client.name,
+        slug: client.slug,
+        emirate: client.emirate,
+        emirates: [client.emirate, ...client.emiratesServed],
+        areas: client.areas,
+        services: client.services,
+        phone: client.phone,
+        whatsapp: client.whatsapp,
+        primaryColor: client.primaryColor ?? "#0f766e",
+        hasCompanyProfile: client.companyProfile.trim().length > 0,
+      }}
+    />
+  )
 }

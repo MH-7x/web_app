@@ -1,5 +1,6 @@
 import { normalizeWebsite, slugify, toE164 } from "@/lib/client-schema"
 import { db } from "@/lib/db"
+import { getDefaultChecklist } from "@/lib/onboarding-templates"
 import type { Project } from "@/lib/generated/prisma/client"
 import { computeTotal, countPages, sanitizeProject, STATUSES, type ProjectData, type ProjectInput, type ProjectListItem, type ProjectStatus } from "@/lib/proposals-types"
 
@@ -100,12 +101,14 @@ async function uniqueSlug(name: string) {
  */
 export async function convertToClient(project: ProjectData) {
   const phone = toE164(project.contactWhatsapp)
+  const category = CLIENT_CATEGORY[project.category]
   const client = await db.client.create({
     data: {
       name: project.clientName,
       nameAr: project.clientName,
       slug: await uniqueSlug(project.clientName),
-      category: CLIENT_CATEGORY[project.category],
+      category,
+      onboardingChecklist: JSON.stringify(getDefaultChecklist(category)),
       // the project does not record an emirate; Edit Client asks for it
       emirate: "",
       areas: project.pages.filter((p) => p.type === "Location").map((p) => p.name),

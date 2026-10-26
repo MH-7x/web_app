@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import { ClientsSkeleton } from "@/components/skeletons"
 import { CategoryBadge } from "@/components/category-badge"
 import { ClientAvatar } from "@/components/client-avatar"
+import { SetupIndicator } from "@/components/clients/setup-indicator"
 import { ClientsFilters } from "@/components/clients-filters"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -70,7 +71,7 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
 
       <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[940px] text-sm">
             <thead className="bg-muted/60 text-left text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
               <tr>
                 <th className="px-4 py-3 font-medium">Client name</th>
@@ -78,6 +79,7 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
                 <th className="px-4 py-3 font-medium">Emirate</th>
                 <th className="px-4 py-3 font-medium">Services</th>
                 <th className="px-4 py-3 font-medium">Live domain</th>
+                <th className="px-4 py-3 font-medium">Setup</th>
                 <th className="px-4 py-3 font-medium">Activity</th>
                 <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
@@ -121,6 +123,9 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <SetupIndicator clientId={c.id} progress={c.checklist} />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{timeAgo(c.lastActivity, now)}</td>
                   <td className="px-4 py-3">

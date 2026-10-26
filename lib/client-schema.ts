@@ -17,6 +17,7 @@ export type ClientInput = {
   uniform: string
   tones: string[]
   notes: string
+  companyProfile: string // the company's full profile, fed to the content generators
   initialSetup: string[]
   facebookUrl: string
   instagramUrl: string
@@ -45,6 +46,7 @@ export const EMPTY_CLIENT: ClientInput = {
   uniform: "",
   tones: [],
   notes: "",
+  companyProfile: "",
   initialSetup: [],
   facebookUrl: "",
   instagramUrl: "",
@@ -54,12 +56,14 @@ export const EMPTY_CLIENT: ClientInput = {
 
 export const STEP_FIELDS: (keyof ClientInput)[][] = [
   ["category", "name", "nameAr", "emirate", "emiratesServed", "website", "phone", "whatsapp", "areas", "services"],
-  ["primaryColor", "secondaryColor", "facebookUrl", "instagramUrl", "driveLink", "otherLinks"],
+  ["primaryColor", "secondaryColor", "companyProfile", "facebookUrl", "instagramUrl", "driveLink", "otherLinks"],
   [],
 ]
 
 const ARABIC = /[؀-ۿ]/
 const HEX = /^#[0-9a-fA-F]{6}$/
+
+export const MAX_COMPANY_PROFILE = 20000
 
 /** Strip everything but digits, drop a leading +971 / 971 / 0, return the national number. */
 export function normalizeUaeNumber(raw: string) {
@@ -156,6 +160,8 @@ export function validateClient(input: ClientInput, fields?: (keyof ClientInput)[
   check("services", input.services.length === 0 ? "Select at least one service." : null)
   check("primaryColor", !HEX.test(input.primaryColor) ? "Use a hex color like #0f766e." : null)
   check("secondaryColor", !HEX.test(input.secondaryColor) ? "Use a hex color like #e2e8f0." : null)
+
+  check("companyProfile", input.companyProfile.length > MAX_COMPANY_PROFILE ? `Keep the company profile under ${MAX_COMPANY_PROFILE.toLocaleString("en-US")} characters.` : null)
 
   check("facebookUrl", !isValidUrl(input.facebookUrl) ? "Enter a valid Facebook page URL." : null)
   check("instagramUrl", !isValidUrl(input.instagramUrl) ? "Enter a valid Instagram page URL." : null)

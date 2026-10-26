@@ -16,6 +16,7 @@ import {
 } from "@/lib/client-schema"
 import { ACTIVE_CLIENT_COOKIE, DEFAULT_CATEGORY, isCategory } from "@/lib/constants"
 import { db } from "@/lib/db"
+import { getDefaultChecklist } from "@/lib/onboarding-templates"
 
 export type ActionResult = { ok: false; errors: FieldErrors; message?: string }
 export type CreateResult = ActionResult | { ok: true; id: string }
@@ -46,6 +47,7 @@ function sanitize(raw: unknown): ClientInput {
     uniform: str(r.uniform).trim(),
     tones: strList(r.tones),
     notes: str(r.notes).trim(),
+    companyProfile: str(r.companyProfile).trim(),
     initialSetup: strList(r.initialSetup),
     facebookUrl: str(r.facebookUrl).trim(),
     instagramUrl: str(r.instagramUrl).trim(),
@@ -80,6 +82,7 @@ function toColumns(input: ClientInput) {
     brandColors: { primary: input.primaryColor, secondary: input.secondaryColor },
     tone: input.tones.join(", ") || null,
     notes: input.notes || null,
+    companyProfile: input.companyProfile,
     facebookUrl: normalizeWebsite(input.facebookUrl),
     instagramUrl: normalizeWebsite(input.instagramUrl),
     driveLink: normalizeWebsite(input.driveLink),
@@ -97,6 +100,7 @@ export async function createClientAction(raw: unknown, options: { navigate?: boo
     data: {
       ...toColumns(input),
       slug: await uniqueSlug(input.name),
+      onboardingChecklist: JSON.stringify(getDefaultChecklist(input.category)),
       brandSpecs: { truckType: input.truckType, uniform: input.uniform, initialSetup: input.initialSetup },
     },
   })

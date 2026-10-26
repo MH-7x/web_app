@@ -60,6 +60,10 @@ web_app
 │  │  │  │  └─ route.ts
 │  │  │  └─ [id]
 │  │  │     └─ route.ts
+│  │  ├─ gbp-connect
+│  │  │  ├─ callback
+│  │  │  │  └─ route.ts
+│  │  │  └─ route.ts
 │  │  ├─ gbp-posts
 │  │  │  ├─ approve
 │  │  │  │  └─ route.ts
@@ -70,6 +74,8 @@ web_app
 │  │  │  ├─ jobs
 │  │  │  │  └─ [jobId]
 │  │  │  │     └─ route.ts
+│  │  │  ├─ publish
+│  │  │  │  └─ route.ts
 │  │  │  └─ [id]
 │  │  │     ├─ regenerate
 │  │  │     │  └─ route.ts
@@ -85,6 +91,20 @@ web_app
 │  │  │  │  └─ route.ts
 │  │  │  └─ save
 │  │  │     └─ route.ts
+│  │  ├─ keywords
+│  │  │  ├─ route.ts
+│  │  │  └─ [id]
+│  │  │     ├─ import
+│  │  │     │  └─ route.ts
+│  │  │     └─ route.ts
+│  │  ├─ proposals
+│  │  │  ├─ route.ts
+│  │  │  └─ [id]
+│  │  │     ├─ convert
+│  │  │     │  └─ route.ts
+│  │  │     ├─ generate
+│  │  │     │  └─ route.ts
+│  │  │     └─ route.ts
 │  │  ├─ reports
 │  │  │  └─ generate
 │  │  │     └─ route.ts
@@ -92,14 +112,22 @@ web_app
 │  │  │  ├─ audit
 │  │  │  │  ├─ route.ts
 │  │  │  │  └─ [jobId]
-│  │  │  │     └─ route.ts
-│  │  │  └─ export
+│  │  │  │     ├─ route.ts
+│  │  │  │     └─ speed
+│  │  │  │        └─ route.ts
+│  │  │  ├─ export
+│  │  │  │  └─ route.ts
+│  │  │  └─ history
 │  │  │     └─ route.ts
 │  │  └─ settings
 │  │     ├─ api-keys
 │  │     │  ├─ route.ts
 │  │     │  └─ test
 │  │     │     └─ route.ts
+│  │     ├─ business
+│  │     │  └─ route.ts
+│  │     ├─ models
+│  │     │  └─ route.ts
 │  │     └─ prompts
 │  │        └─ [name]
 │  │           ├─ reset
@@ -119,14 +147,26 @@ web_app
 │  │     └─ page.tsx
 │  ├─ content
 │  │  └─ page.tsx
+│  ├─ error.tsx
 │  ├─ favicon.ico
 │  ├─ gbp-posts
 │  │  └─ page.tsx
 │  ├─ globals.css
 │  ├─ humanizer
 │  │  └─ page.tsx
+│  ├─ keywords
+│  │  └─ page.tsx
 │  ├─ layout.tsx
+│  ├─ not-found.tsx
 │  ├─ page.tsx
+│  ├─ proposals
+│  │  ├─ new
+│  │  │  └─ page.tsx
+│  │  ├─ page.tsx
+│  │  └─ [id]
+│  │     ├─ edit
+│  │     │  └─ page.tsx
+│  │     └─ page.tsx
 │  ├─ reports
 │  │  └─ page.tsx
 │  ├─ seo
@@ -140,10 +180,12 @@ web_app
 │  │  ├─ use-ads-generator.ts
 │  │  └─ workspace.tsx
 │  ├─ breadcrumb.tsx
+│  ├─ category-badge.tsx
 │  ├─ client-avatar.tsx
 │  ├─ client-form.tsx
 │  ├─ client-selector.tsx
 │  ├─ clients
+│  │  ├─ message-builder.tsx
 │  │  └─ setup-progress.tsx
 │  ├─ clients-filters.tsx
 │  ├─ coming-soon.tsx
@@ -161,21 +203,37 @@ web_app
 │  ├─ empty-state.tsx
 │  ├─ gbp
 │  │  ├─ calendar-workspace.tsx
+│  │  ├─ disconnect-button.tsx
 │  │  ├─ generate-wizard.tsx
-│  │  └─ post-detail.tsx
+│  │  ├─ post-detail.tsx
+│  │  └─ publish-actions.tsx
 │  ├─ history-item.tsx
 │  ├─ humanizer
 │  │  ├─ batch-mode.tsx
 │  │  ├─ parts.tsx
 │  │  ├─ paste-mode.tsx
 │  │  └─ workspace.tsx
+│  ├─ keywords
+│  │  ├─ import-dialog.tsx
+│  │  ├─ keyword-table.tsx
+│  │  ├─ summary-cards.tsx
+│  │  └─ workspace.tsx
+│  ├─ proposals
+│  │  ├─ project-form.tsx
+│  │  ├─ proposal-document.tsx
+│  │  ├─ proposal-view.tsx
+│  │  ├─ row-actions.tsx
+│  │  └─ status-badge.tsx
 │  ├─ reports
 │  │  └─ workspace.tsx
 │  ├─ seo
+│  │  ├─ audit-log.tsx
 │  │  ├─ audit-runner.tsx
+│  │  ├─ delete-audit.tsx
 │  │  ├─ findings-list.tsx
 │  │  ├─ report-view.tsx
 │  │  ├─ score-ring.tsx
+│  │  ├─ speed-picker.tsx
 │  │  └─ start-audit-button.tsx
 │  ├─ settings
 │  │  ├─ api-keys-tab.tsx
@@ -226,7 +284,9 @@ web_app
 │  │  ├─ groups.ts
 │  │  ├─ imageinfo.ts
 │  │  ├─ jobs.ts
+│  │  ├─ keywords.ts
 │  │  ├─ lighthouse.ts
+│  │  ├─ log.ts
 │  │  ├─ net.ts
 │  │  ├─ phones.ts
 │  │  ├─ report.ts
@@ -234,6 +294,7 @@ web_app
 │  │  ├─ site-probes.ts
 │  │  ├─ text.ts
 │  │  └─ types.ts
+│  ├─ business-types.ts
 │  ├─ client-schema.ts
 │  ├─ clients.ts
 │  ├─ constants.ts
@@ -245,6 +306,7 @@ web_app
 │  ├─ download.ts
 │  ├─ env-file.ts
 │  ├─ format.ts
+│  ├─ gbp-api.ts
 │  ├─ gbp-jobs.ts
 │  ├─ gbp-posts-api.ts
 │  ├─ gbp-posts-types.ts
@@ -255,21 +317,30 @@ web_app
 │  │  ├─ content.ts
 │  │  ├─ gbp-posts.ts
 │  │  ├─ humanizer.ts
+│  │  ├─ proposals.ts
 │  │  └─ reports.ts
 │  ├─ humanizer-patterns.ts
 │  ├─ humanizer-store.ts
 │  ├─ humanizer-types.ts
+│  ├─ keyword-groups.ts
+│  ├─ keyword-import.ts
+│  ├─ keywords-types.ts
 │  ├─ onboarding.ts
 │  ├─ prompts
 │  │  ├─ fb-examples.ts
 │  │  ├─ gbp-examples.ts
 │  │  ├─ humanizer.ts
+│  │  ├─ proposal.ts
 │  │  ├─ report.ts
 │  │  ├─ sample-run.ts
 │  │  ├─ shared.ts
 │  │  ├─ store.ts
 │  │  └─ templates.ts
+│  ├─ proposal-text.ts
+│  ├─ proposals-types.ts
+│  ├─ proposals.ts
 │  ├─ reports-types.ts
+│  ├─ settings.ts
 │  └─ utils.ts
 ├─ next.config.ts
 ├─ package.json
@@ -283,6 +354,8 @@ web_app
 │  ├─ file.svg
 │  ├─ globe.svg
 │  ├─ next.svg
+│  ├─ proposal
+│  │  └─ profile.jpg
 │  ├─ vercel.svg
 │  └─ window.svg
 ├─ README.md

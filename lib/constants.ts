@@ -83,6 +83,7 @@ export const CONTENT_TYPES: Record<string, { label: string; tone: string }> = {
   faq: { label: "FAQ Generator", tone: "stone" },
   blog: { label: "Blog Post", tone: "sky" },
   meta: { label: "Meta Tags", tone: "amber" },
+  landing: { label: "Landing Page", tone: "sky" },
   rsa: { label: "Google RSA", tone: "stone" },
   "fb-ad": { label: "Facebook Ad", tone: "teal" },
   humanized: { label: "Humanized Text", tone: "stone" },

@@ -3,7 +3,9 @@ import {
   ExternalLink,
   FileText,
   Globe,
+  History as HistoryIcon,
   LayoutGrid,
+  ListChecks,
   MapPin,
   MessageCircle,
   Palette,
@@ -24,6 +26,9 @@ import { Suspense } from "react"
 import { EmptyState } from "@/components/empty-state"
 import { ClientDetailSkeleton } from "@/components/skeletons"
 import { ClientAvatar } from "@/components/client-avatar"
+import { ActivityTimeline } from "@/components/clients/activity-timeline"
+import { OnboardingChecklist } from "@/components/clients/onboarding-checklist"
+import { QuickNotes } from "@/components/clients/quick-notes"
 import { MessageBuilder } from "@/components/clients/message-builder"
 import { CopyButton } from "@/components/copy-button"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
@@ -35,6 +40,7 @@ import { Card, CardContent, CardHeader, CardTitle, Eyebrow } from "@/components/
 import { displayDomain, formatPhone, normalizeUaeNumber } from "@/lib/client-schema"
 import { getClient, getClientContentStats, listClientContent, type ClientDetail } from "@/lib/clients"
 import { CONTENT_TYPES, INITIAL_SETUP_OPTIONS } from "@/lib/constants"
+import { ensureChecklist } from "@/lib/onboarding-checklist"
 import { getConnectionSummary } from "@/lib/gbp-api"
 import { formatDate, timeAgo } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -64,7 +70,7 @@ async function ClientDetailContent({
   if (!client) notFound()
 
   const tabParam = first(sp.tab)
-  const tab = tabParam === "history" ? "history" : tabParam === "settings" ? "settings" : "overview"
+  const tab = (["history", "activity", "onboarding", "settings"] as const).find((t) => t === tabParam) ?? "overview"
   const now = new Date()
 
   return (
@@ -116,6 +122,17 @@ async function ClientDetailContent({
         <TabLink href={`/clients/${client.id}?tab=history`} active={tab === "history"} icon={<FileText />} count={stats.total}>
           Content History
         </TabLink>
+        <TabLink href={`/clients/${client.id}?tab=activity`} active={tab === "activity"} icon={<HistoryIcon />}>
+          Activity
+        </TabLink>
+        <TabLink
+          href={`/clients/${client.id}?tab=onboarding`}
+          active={tab === "onboarding"}
+          icon={<ListChecks />}
+          count={client.checklist.total ? `${client.checklist.done}/${client.checklist.total}` : undefined}
+        >
+          Onboarding
+        </TabLink>
         <TabLink href={`/clients/${client.id}?tab=settings`} active={tab === "settings"} icon={<Settings />}>
           Settings
         </TabLink>
@@ -123,11 +140,18 @@ async function ClientDetailContent({
 
       {tab === "overview" ? (
         <Overview client={client} stats={stats} now={now} />
+      ) : tab === "activity" ? (
+        <ActivityTimeline clientId={client.id} />
+      ) : tab === "onboarding" ? (
+        <OnboardingSection clientId={client.id} />
       ) : tab === "settings" ? (
         <GbpSection clientId={client.id} result={first(sp.gbp)} message={first(sp.message)} />
       ) : (
         <History clientId={client.id} total={stats.total} type={first(sp.type)} q={first(sp.q)} now={now} />
       )}
+
+      {/* outside the tab switch, so the notes stay one click away on every tab */}
+      <QuickNotes key={client.id} clientId={client.id} initialNotes={client.quickNotes} />
     </div>
   )
 }
@@ -142,7 +166,7 @@ function TabLink({
   href: string
   active: boolean
   icon: React.ReactNode
-  count?: number
+  count?: number | string
   children: React.ReactNode
 }) {
   return (
@@ -427,6 +451,15 @@ function Chips({ label, items, tone, empty }: { label: string; items: string[]; 
       )}
     </div>
   )
+}
+
+/* -------------------------------------------------------------- onboarding */
+
+async function OnboardingSection({ clientId }: { clientId: string }) {
+  // clients created before the checklist existed get their default list the first time it is opened
+  const items = await ensureChecklist(clientId)
+  if (!items) notFound()
+  return <OnboardingChecklist clientId={clientId} initialItems={items} />
 }
 
 /* ---------------------------------------------------------------- settings */

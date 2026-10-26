@@ -60,7 +60,7 @@ export function wordOverlap(a: string, b: string) {
 
 /* -------------------------------------------------------------- readability */
 
-function syllables(word: string) {
+export function syllables(word: string) {
   const w = word.toLowerCase().replace(/[^a-z]/g, "")
   if (!w) return 0
   if (w.length <= 3) return 1

@@ -5,9 +5,13 @@ import { generateFacebookAds } from "@/lib/generators/ads"
 import { generateBlog, generateFAQ, generateGBP, generateMeta } from "@/lib/generators/content"
 import { writePosts } from "@/lib/generators/gbp-posts"
 import { humanizeContent, scoreContent } from "@/lib/generators/humanizer"
+import { briefAsText, type CompetitorSummary } from "@/lib/competitor-types"
+import { generateLandingPage, planLandingPage } from "@/lib/generators/landing-page"
+import { generateSerpBrief } from "@/lib/generators/serp-brief"
 import { generateProposal } from "@/lib/generators/proposals"
 import { generateReport } from "@/lib/generators/reports"
 import { dateKey } from "@/lib/gbp-posts-types"
+import { landingMarkdown } from "@/lib/landing-page-types"
 import { parseMonth } from "@/lib/reports-types"
 import type { TemplateName } from "@/lib/prompts/templates"
 
@@ -32,6 +36,10 @@ export const SAMPLE_CLIENT: ClientDetail = {
   initialSetup: [],
   tones: ["Professional", "Trustworthy"],
   notes: "",
+  quickNotes: [],
+  companyProfile:
+    "Al Noor Movers is a family-run company in Sharjah that does villa and apartment moves, packing and storage. Two crews of four movers each, three closed box trucks. Free on-site estimate within a day. Packing materials are included in villa moves. Customers say the crew arrives on time and handles furniture carefully.",
+  checklist: { done: 0, total: 0, percent: 0 },
   facebookUrl: "",
   instagramUrl: "",
   driveLink: "",
@@ -42,6 +50,45 @@ export const SAMPLE_CLIENT: ClientDetail = {
 
 const SAMPLE_TEXT =
   "Al Noor Movers is a leading moving company in Sharjah, nestled in the heart of the community. We boast a vibrant team of experienced professionals who utilize state-of-the-art equipment, ensuring a seamless relocation experience. It's not just a move, it's a testament to our commitment to excellence. Call +971 50 123 4567 today!"
+
+const SAMPLE_BRIEF_INPUT = {
+  primaryKeyword: "villa movers in Sharjah",
+  secondaryKeywords: ["villa moving service Sharjah"],
+  emirate: "Sharjah",
+  service: "Villa Moving",
+  pageType: "service" as const,
+}
+
+/** Made-up competitor pages for "Test with sample client": nothing is crawled. */
+const sampleCompetitor = (n: number, outline: string[], wordCount: number): CompetitorSummary => ({
+  url: `https://competitor${n}.example/villa-movers-sharjah`,
+  finalUrl: `https://competitor${n}.example/villa-movers-sharjah`,
+  fetchedAt: new Date(0).toISOString(),
+  status: 200,
+  language: "en",
+  title: "Villa Movers in Sharjah | Packing and Moving",
+  metaDescription: "Professional villa movers in Sharjah. Get a free quote today.",
+  h1: "Villa Movers in Sharjah",
+  outline: outline.map((text) => ({ level: 2 as const, text })),
+  wordCount,
+  faqQuestions: ["How much does a villa move cost in Sharjah?", "Do you provide packing materials?"],
+  hasFaq: true,
+  hasProcess: n !== 3,
+  schemaTypes: ["LocalBusiness"],
+  ctas: { tel: true, whatsapp: n !== 2, form: n === 1 },
+  hasReviews: n !== 3,
+  hasMap: false,
+  images: { count: 6 + n, withAlt: 4, altSamples: [] },
+  readingEase: 62,
+  cached: false,
+  keyword: { inTitle: true, inH1: true, inFirst100: true, inHeading: true, uses: 4, density: 0.8, secondaryFound: [] },
+})
+
+const SAMPLE_COMPETITORS: CompetitorSummary[] = [
+  sampleCompetitor(1, ["Our villa moving services", "Why choose us", "How it works", "Areas we cover", "Frequently asked questions"], 1150),
+  sampleCompetitor(2, ["Villa relocation made simple", "What is included", "Our moving process", "Customer reviews", "FAQ"], 1320),
+  sampleCompetitor(3, ["Villa movers in Sharjah", "Packing and unpacking", "Furniture dismantling", "Get a quote"], 880),
+]
 
 const list = (items: { question: string; answer: string }[]) => items.map((f, i) => `${i + 1}. ${f.question}\n${f.answer}`).join("\n\n")
 
@@ -59,6 +106,14 @@ export async function runSample(name: TemplateName): Promise<string> {
     }
     case "meta-tags":
       return renderText("meta", (await generateMeta(c, "en", { pages: ["home", "services"] })).en ?? [])
+    case "serp-analysis":
+      return briefAsText(await generateSerpBrief(c, SAMPLE_BRIEF_INPUT, SAMPLE_COMPETITORS))
+    case "landing-page-brief":
+      return JSON.stringify(await planLandingPage(c, "en", { ...SAMPLE_BRIEF_INPUT, competitorUrls: [], serpBrief: null }), null, 2)
+    case "landing-page": {
+      const result = await generateLandingPage(c, { language: "en", ...SAMPLE_BRIEF_INPUT, competitorUrls: [], serpBrief: null })
+      return result.en ? landingMarkdown(result.en) : ""
+    }
     case "fb-ad": {
       const result = await generateFacebookAds(c, "en", { emirates: ["Sharjah"], objective: "messages", offer: "", audience: "", count: 2 })
       return result.en ? renderFacebookText(result.en) : ""

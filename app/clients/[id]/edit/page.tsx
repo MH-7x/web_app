@@ -50,6 +50,7 @@ async function EditForm({ params }: { params: PageProps<"/clients/[id]/edit">["p
     uniform: client.uniform,
     tones: client.tones,
     notes: client.notes,
+    companyProfile: client.companyProfile,
     initialSetup: client.initialSetup,
     facebookUrl: client.facebookUrl,
     instagramUrl: client.instagramUrl,

@@ -1,6 +1,9 @@
+import { parseNotes } from "@/lib/client-notes"
 import { asOtherLinks, asRecord, asStringArray } from "@/lib/client-schema"
 import { DEFAULT_CATEGORY, PAGE_SIZE, isCategory, type ClientCategory } from "@/lib/constants"
 import { db } from "@/lib/db"
+import { checklistProgress, type ChecklistProgress } from "@/lib/onboarding-checklist-types"
+import { parseChecklist, seedChecklists } from "@/lib/onboarding-checklist"
 import type { Prisma } from "@/lib/generated/prisma/client"
 
 export type ClientListItem = {
@@ -14,6 +17,7 @@ export type ClientListItem = {
   website: string | null
   contentCount: number
   lastActivity: Date
+  checklist: ChecklistProgress
 }
 
 export type ClientFilters = { q?: string; emirate?: string; category?: string }
@@ -52,6 +56,9 @@ export async function listClients(filters: ClientFilters, page: number) {
     }),
   ])
 
+  // clients created before the checklist existed get their default list the first time they are listed
+  const checklists = await seedChecklists(rows)
+
   const items: ClientListItem[] = rows.map((c) => ({
     id: c.id,
     name: c.name,
@@ -63,6 +70,7 @@ export async function listClients(filters: ClientFilters, page: number) {
     website: c.website,
     contentCount: c._count.content,
     lastActivity: c.content[0]?.createdAt ?? c.updatedAt,
+    checklist: checklistProgress(checklists.get(c.id) ?? []),
   }))
   return { items, total }
 }
@@ -113,6 +121,9 @@ export async function getClient(id: string) {
       .map((t) => t.trim())
       .filter(Boolean),
     notes: client.notes ?? "",
+    quickNotes: parseNotes(client.clientNotes),
+    checklist: checklistProgress(parseChecklist(client.onboardingChecklist)),
+    companyProfile: client.companyProfile,
     facebookUrl: client.facebookUrl,
     instagramUrl: client.instagramUrl,
     driveLink: client.driveLink,
