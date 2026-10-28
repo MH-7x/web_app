@@ -55,7 +55,7 @@ function ImportBody({ groupId, file, onClose, onImported }: { groupId: string; f
       const body = (await res.json().catch(() => null)) as { keywords?: KeywordRow[]; added?: number; updated?: number; skipped?: number; error?: string } | null
       if (!res.ok || !body?.keywords) throw new Error(body?.error ?? `Request failed (${res.status}).`)
       onImported(body.keywords)
-      toast.success(`Imported ${body.added} new ${body.added === 1 ? "keyword" : "keywords"}`, { description: [body.updated ? `${body.updated} updated` : "", body.skipped ? `${body.skipped} duplicates skipped` : ""].filter(Boolean).join(", ") || undefined })
+      toast.success(`${body.added} ${body.added === 1 ? "keyword" : "keywords"} imported to group`, { description: [body.updated ? `${body.updated} updated` : "", body.skipped ? `${body.skipped} duplicates skipped` : ""].filter(Boolean).join(", ") || undefined })
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.")

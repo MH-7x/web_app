@@ -31,7 +31,7 @@ export function BatchToggle({ checked, onChange, disabled }: { checked: boolean;
         onClick={() => onChange(!checked)}
         className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50", checked ? "bg-primary" : "bg-muted-foreground/30")}
       >
-        <span className={cn("absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform", checked && "translate-x-4")} />
+        <span className={cn("absolute top-0.5 left-0.5 size-4 rounded-full bg-background shadow transition-transform", checked && "translate-x-4")} />
       </button>
       Batch: All Emirates
     </label>

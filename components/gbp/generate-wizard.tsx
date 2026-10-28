@@ -123,7 +123,7 @@ export function GenerateWizard({
     }
     if ((job.status === "completed" || job.status === "failed") && handled.current !== job.id) {
       handled.current = job.id
-      if (job.status === "completed") toast.success(`${job.written} ${job.written === 1 ? "post" : "posts"} added as drafts`, { description: "Review them on the calendar." })
+      if (job.status === "completed") toast.success(`${job.written} ${job.written === 1 ? "post" : "posts"} generated`, { description: "Review them on the calendar." })
       else toast.error("Writing the posts stopped", { description: job.error ?? undefined })
       void finish(job)
     }

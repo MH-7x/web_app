@@ -1,3 +1,4 @@
+import { GeminiKeyBanner } from "@/components/gemini-key-banner"
 import { Users } from "lucide-react"
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
@@ -16,6 +17,9 @@ export default function ContentPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <h1 className="text-2xl font-semibold tracking-tight">Content</h1>
+      <Suspense fallback={null}>
+        <GeminiKeyBanner />
+      </Suspense>
       <Suspense fallback={<WorkspaceSkeleton />}>
         <ActiveClientWorkspace />
       </Suspense>
@@ -33,7 +37,7 @@ async function ActiveClientWorkspace() {
         <Users className="size-8 text-muted-foreground/60" />
         <p className="font-medium">Select a client to start generating</p>
         <p className="max-w-md text-sm text-muted-foreground">
-          Pick the client you&apos;re writing for from the selector in the top bar. Every generator uses that client&apos;s profile.
+          Select a client from the dropdown above to use this module. Every generator uses that client&apos;s profile.
         </p>
         <Link href="/clients/new" className={buttonVariants({ variant: "outline", size: "lg" })}>
           Add a client

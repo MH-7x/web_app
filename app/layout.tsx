@@ -6,6 +6,7 @@ import { Suspense } from "react"
 
 import { Sidebar, SidebarFallback } from "@/components/sidebar"
 import { themeInitScript } from "@/components/theme-toggle"
+import { NetworkErrorShim } from "@/components/network-error-shim"
 import { Topbar } from "@/components/topbar"
 import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Topbar />
         <main className="ml-[200px] min-h-screen px-6 pt-[calc(3rem+1.5rem)] pb-10">{children}</main>
         <Toaster />
+        <NetworkErrorShim />
       </body>
     </html>
   )

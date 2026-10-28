@@ -1,3 +1,4 @@
+import { GeminiKeyBanner } from "@/components/gemini-key-banner"
 import { FileText, Plus } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
@@ -28,6 +29,9 @@ export default function ProposalsPage(props: PageProps<"/proposals">) {
           <Plus /> New Project
         </Link>
       </div>
+      <Suspense fallback={null}>
+        <GeminiKeyBanner />
+      </Suspense>
       <Suspense fallback={<ProposalsSkeleton />}>
         <List searchParams={props.searchParams} />
       </Suspense>
@@ -61,7 +65,7 @@ async function List({ searchParams }: { searchParams: PageProps<"/proposals">["s
       {projects.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title={total === 0 ? "No projects yet" : "No projects with this status"}
+          title={total === 0 ? "Create your first project proposal" : "No projects with this status"}
           description={total === 0 ? "Add a website project from a WhatsApp enquiry, then let Gemini write the proposal for you." : "Try another status."}
         >
           {total === 0 && (

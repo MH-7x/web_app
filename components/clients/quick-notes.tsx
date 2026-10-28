@@ -81,6 +81,7 @@ export function QuickNotes({ clientId, initialNotes }: { clientId: string; initi
     const text = draft.trim()
     if (!text || busy) return
     if (await send({ action: "add", text })) {
+      toast.success("Note added")
       setDraft("")
       inputRef.current?.focus()
     }

@@ -62,7 +62,7 @@ export function ReplyPanel({
       setText(next)
       // keep the draft so it is still there when the panel is reopened
       onChange(review.id, await callReply<ReplyPatch>(review.id, { action: "save", text: next }))
-      toast.success("Reply drafted", { description: "Edit it if you like, then copy it into Google." })
+      toast.success("Reply drafted — review and copy")
     })
   }
 

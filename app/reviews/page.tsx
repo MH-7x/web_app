@@ -1,3 +1,4 @@
+import { GeminiKeyBanner } from "@/components/gemini-key-banner"
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
 import { connection } from "next/server"
@@ -17,6 +18,9 @@ export default function ReviewsPage(props: PageProps<"/reviews">) {
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <h1 className="text-2xl font-semibold tracking-tight">Reviews</h1>
+      <Suspense fallback={null}>
+        <GeminiKeyBanner />
+      </Suspense>
       <Suspense fallback={<TableSkeleton rows={5} />}>
         <ReviewsContent searchParams={props.searchParams} />
       </Suspense>

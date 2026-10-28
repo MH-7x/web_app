@@ -10,6 +10,7 @@ import { DiffPair, StrictnessToggle } from "@/components/humanizer/parts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/input"
+import { isArabic } from "@/lib/format"
 import { findPatterns } from "@/lib/humanizer-patterns"
 import { PASTE_MAX_CHARS, type Strictness } from "@/lib/humanizer-types"
 
@@ -81,7 +82,7 @@ export function PasteMode({ clientId, strictness, onStrictness }: { clientId: st
       <div className="space-y-1.5">
         <Textarea
           aria-label="Text to humanize"
-          dir="auto"
+          dir={isArabic(text) ? "rtl" : "ltr"}
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={loading}

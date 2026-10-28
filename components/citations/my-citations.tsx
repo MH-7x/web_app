@@ -53,7 +53,7 @@ export function MyCitations({
       if (!res.ok || !body?.citations) throw new Error(body?.error ?? `Request failed (${res.status}).`)
       onCitationsChange(body.citations)
       onTrackingChanged()
-      toast.success(body.added ? `${body.added} ${body.added === 1 ? "directory" : "directories"} added to tracking` : "Already tracking every relevant directory")
+      toast.success(body.added ? `Citation tracking initialized with ${body.added} ${body.added === 1 ? "source" : "sources"}` : "Already tracking every relevant directory")
     } catch (e) {
       toast.error("Couldn't start tracking", { description: e instanceof Error ? e.message : "Please try again." })
     } finally {
@@ -66,7 +66,7 @@ export function MyCitations({
       <EmptyState
         icon={ListChecks}
         title="Citation tracking hasn't started for this client"
-        description={`This adds every directory and backlink source that suits a ${client.category.replace("_", " ")} business, ready to check one by one. You can add more in Citation Sources.`}
+        description={`Initialize citation tracking for this client. This adds every directory and backlink source that suits a ${client.category.replace("_", " ")} business, ready to check one by one. You can add more in Citation Sources.`}
       >
         <Button size="lg" onClick={initialize} disabled={initializing}>
           {initializing ? <Loader2 className="animate-spin" /> : <Plus />} Initialize Citation Tracking

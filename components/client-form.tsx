@@ -83,7 +83,7 @@ export function ClientForm({ mode, clientId, initial }: Props) {
     startTransition(async () => {
       const result = wizard ? await createClientAction(values, { navigate: false }) : await updateClientAction(clientId, values, { navigate: false })
       if (result && result.ok) {
-        toast.success(wizard ? "Client created" : "Changes saved", { description: values.name.trim() })
+        toast.success(wizard ? "Client created" : "Client updated", { description: values.name.trim() })
         if (!generate) {
           router.push(`/clients/${result.id}`)
           return

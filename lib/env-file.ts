@@ -10,12 +10,15 @@ export function maskSecret(value: string | undefined) {
   return `${value.slice(0, 4)}${"•".repeat(Math.min(24, value.length - 8))}${value.slice(-4)}`
 }
 
+/** The only variables the API may write. Anything else is rejected. */
+export const ALLOWED_ENV_KEYS = ["GEMINI_API_KEY", "GEMINI_MODEL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] as const
+
 /**
  * Set NAME=value in the .env file, keeping every other line, comment and the quoting style of the line being replaced.
  * Also updates process.env so the running server uses the value straight away.
  */
 export async function setEnvValue(name: string, value: string) {
-  if (!/^[A-Z][A-Z0-9_]*$/.test(name)) throw new Error("Invalid variable name.")
+  if (!(ALLOWED_ENV_KEYS as readonly string[]).includes(name)) throw new Error("That variable cannot be changed from the app.")
   if (/[\r\n"'\$`\s]/.test(value)) throw new Error("The value contains characters that are not allowed.")
 
   let text = ""

@@ -132,7 +132,7 @@ export function BatchMode({ client, strictness, onStrictness }: { client: { id: 
   }
 
   if (!client) {
-    return <EmptyState icon={Users} title="Select a client" description="Batch mode humanizes a client's saved content in bulk. Pick a client from the selector in the top bar." />
+    return <EmptyState icon={Users} title="Select a client" description="Select a client from the dropdown above to use this module. Batch mode humanizes a client's saved content in bulk." />
   }
 
   return (
@@ -234,7 +234,7 @@ export function BatchMode({ client, strictness, onStrictness }: { client: { id: 
                             {busy.has(id) ? <Loader2 className="animate-spin" /> : <Check />} Approve
                           </Button>
                         ) : running && i === items.find((x) => !x.approved && !outcomes[idOf(x)]) ? (
-                          <Loader2 className="ml-auto size-4 animate-spin text-primary" />
+                          <Loader2 aria-label="Loading" className="ml-auto size-4 animate-spin text-primary" />
                         ) : (
                           <span className="text-muted-foreground">Waiting</span>
                         )}

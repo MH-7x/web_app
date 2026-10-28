@@ -129,7 +129,7 @@ export function BulkUpload({ clients, defaultClientId, onDone, onClose }: { clie
           <FileSpreadsheet className="size-6 text-muted-foreground" />
           <span className="text-sm font-medium">{file ? file.name : "Choose a CSV or Excel file, or drop it here"}</span>
           <span className="text-xs text-muted-foreground">.csv, .xlsx or .xls, up to {MAX_IMPORT_ROWS} reviews</span>
-          <input id={`${id}-file`} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" className="sr-only" disabled={busy} onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
+          <input id={`${id}-file`} type="file" accept=".csv,.xlsx" className="sr-only" disabled={busy} onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
         </label>
         <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
           <p>

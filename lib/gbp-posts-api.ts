@@ -25,5 +25,11 @@ export function handleError(error: unknown, scope: string) {
   if (error instanceof GeminiError) return fail(error.message, error.status)
   if (error instanceof GbpApiError) return fail(error.message, error.status)
   console.error(`[${scope}]`, error)
+  if (isDatabaseError(error)) return fail("Database error", 500)
   return fail("Something went wrong. Please try again.", 500)
+}
+
+/** Prisma errors carry internals (table names, query text) the UI must never see. */
+function isDatabaseError(error: unknown) {
+  return error instanceof Error && /^PrismaClient/.test(error.name)
 }

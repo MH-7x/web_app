@@ -167,7 +167,7 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
             <Users className="size-8 text-muted-foreground/60" />
             <p className="font-medium">{filtering ? "No clients match your filters" : "No clients yet"}</p>
             <p className="text-sm text-muted-foreground">
-              {filtering ? "Try a different search or reset the filters." : "Add your first moving company to get started."}
+              {filtering ? "Try a different search or reset the filters." : "Add your first client to get started."}
             </p>
             {!filtering && (
               <Link href="/clients/new" className={cn(buttonVariants(), "mt-2")}>

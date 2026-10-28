@@ -6,7 +6,7 @@ import { MAX_KEYWORDS_PER_GROUP, normalizeRows, type KeywordRow } from "@/lib/ke
 
 /** Reads a Google Keyword Planner export (CSV, TSV or XLSX) into keyword rows. */
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 /** Header text with case, spaces and punctuation removed, so "Avg. monthly searches" and "avg monthly searches" match. */
 const norm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
@@ -49,8 +49,8 @@ function readSheet(buf: Buffer, filename: string): unknown[][] {
 
 export function parseKeywordFile(buf: Buffer, filename: string): { rows: KeywordRow[]; skipped: number } {
   if (buf.length === 0) throw new BadRequestError("That file is empty.")
-  if (buf.length > MAX_UPLOAD_BYTES) throw new BadRequestError("That file is larger than 5 MB.")
-  if (!/\.(csv|tsv|txt|xlsx|xls)$/i.test(filename)) throw new BadRequestError("Upload a .csv or .xlsx file.")
+  if (buf.length > MAX_UPLOAD_BYTES) throw new BadRequestError("That file is larger than 10 MB.")
+  if (!/\.(csv|xlsx)$/i.test(filename)) throw new BadRequestError("Upload a .csv or .xlsx file.")
 
   let table: unknown[][]
   try {

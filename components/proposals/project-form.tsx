@@ -113,7 +113,7 @@ export function ProjectForm(props: Props) {
         setError(`${body?.error ?? `Request failed (${res.status}).`} Your project is saved, so you can try again.`)
         return
       }
-      toast.success("Proposal generated")
+      toast.success("Proposal generated — review below")
       router.push(`/proposals/${id}`)
     } catch {
       setError("Could not reach the server. Your project may not be saved; try again.")

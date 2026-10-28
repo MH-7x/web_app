@@ -74,8 +74,8 @@ const shown = (v: unknown) => String(v ?? "").trim()
 
 export function parseReviewFile(buf: Buffer, filename: string): { rows: ImportRow[]; problems: ImportProblem[]; total: number } {
   if (buf.length === 0) throw new BadRequestError("That file is empty.")
-  if (buf.length > MAX_UPLOAD_BYTES) throw new BadRequestError("That file is larger than 5 MB.")
-  if (!/\.(csv|tsv|txt|xlsx|xls)$/i.test(filename)) throw new BadRequestError("Upload a .csv or .xlsx file.")
+  if (buf.length > MAX_UPLOAD_BYTES) throw new BadRequestError("That file is larger than 10 MB.")
+  if (!/\.(csv|xlsx)$/i.test(filename)) throw new BadRequestError("Upload a .csv or .xlsx file.")
 
   let table: unknown[][]
   try {

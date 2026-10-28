@@ -1,3 +1,4 @@
+import { GeminiKeyBanner } from "@/components/gemini-key-banner"
 import { Users } from "lucide-react"
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
@@ -17,6 +18,9 @@ export default function ReportsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <h1 className="text-2xl font-semibold tracking-tight print:hidden">Reports</h1>
+      <Suspense fallback={null}>
+        <GeminiKeyBanner />
+      </Suspense>
       <Suspense fallback={<ReportsSkeleton />}>
         <ActiveClientReports />
       </Suspense>
@@ -36,7 +40,7 @@ async function ActiveClientReports() {
       <div className="flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-20 text-center ring-1 ring-foreground/10">
         <Users className="size-8 text-muted-foreground/60" />
         <p className="font-medium">Select a client to write a report</p>
-        <p className="max-w-md text-sm text-muted-foreground">Reports are written for one client at a time. Pick a client from the selector in the top bar.</p>
+        <p className="max-w-md text-sm text-muted-foreground">Select a client from the dropdown above to use this module. Reports are written for one client at a time.</p>
         <Link href="/clients/new" className={buttonVariants({ variant: "outline", size: "lg" })}>
           Add a client
         </Link>

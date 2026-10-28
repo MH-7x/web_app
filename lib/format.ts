@@ -17,3 +17,11 @@ export function timeAgo(date: Date, now = new Date()) {
 export function formatDate(date: Date) {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 }
+
+/** True when most of the letters in `text` are Arabic script, so a container can switch to dir="rtl". */
+export function isArabic(text: string) {
+  const letters = text.match(/\p{L}/gu)
+  if (!letters) return false
+  const arabic = letters.filter((c) => /\p{Script=Arabic}/u.test(c)).length
+  return arabic > letters.length / 2
+}

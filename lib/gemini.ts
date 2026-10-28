@@ -48,7 +48,7 @@ let clientKey: string | undefined
 export function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    throw new GeminiError("missing_key", "GEMINI_API_KEY is not set. Add it in Settings or in your .env file.", 500)
+    throw new GeminiError("missing_key", "Gemini API key not configured. Set it in Settings → API Keys.", 503)
   }
   if (!client || clientKey !== apiKey) {
     client = new GoogleGenerativeAI(apiKey)
@@ -93,7 +93,7 @@ function classify(error: unknown): GeminiError {
     if (status === 429 && /PerDay/i.test(JSON.stringify(error.errorDetails ?? []) + error.message)) {
       return new GeminiError("quota_exhausted", `The daily Gemini quota for ${getModelName()} is used up on this API key (free tier). Enable billing on the key's Google project, or pick a different model in Settings → API Keys.`, 429)
     }
-    if (status === 429) return new GeminiError("rate_limited", "Gemini is rate limiting requests. Wait a moment and try again.", 429, true)
+    if (status === 429) return new GeminiError("rate_limited", "Rate limited. Wait a moment and try again.", 429, true)
     if (status === 401 || status === 403 || (status === 400 && /api key/i.test(error.message))) {
       return new GeminiError("invalid_key", "Gemini rejected the API key. Check GEMINI_API_KEY in your .env file.", 502)
     }
@@ -104,7 +104,7 @@ function classify(error: unknown): GeminiError {
   }
 
   if (error instanceof GoogleGenerativeAIResponseError) {
-    return new GeminiError("blocked", "Gemini declined to answer this request. Adjust the inputs and try again.", 422)
+    return new GeminiError("blocked", "Generation failed. Try again or adjust your prompt.", 422)
   }
 
   const message = error instanceof Error ? error.message : String(error)
@@ -113,6 +113,14 @@ function classify(error: unknown): GeminiError {
     return new GeminiError("unavailable", "Could not reach Gemini. Check your connection and try again.", 503, true)
   }
   return new GeminiError("unknown", "Something went wrong while talking to Gemini.", 500)
+}
+
+/** Strip the usual prompt-injection patterns (fake role tags, "ignore previous instructions") from a prompt before it is sent. */
+export function sanitizePrompt(text: string) {
+  return text
+    .replace(/<\s*(system|assistant|developer)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*\/?\s*(system|assistant|developer)\b[^>]*>/gi, "")
+    .replace(/\b(?:ignore|disregard|forget)\b[^.\n]{0,40}\b(?:previous|prior|above|earlier)\b[^.\n]{0,40}\b(?:instructions?|prompts?|rules?|messages?)\b[^.\n]*/gi, "")
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -138,10 +146,10 @@ type GenerateOptions = { systemInstruction?: string; temperature?: number; timeo
 /** One-shot text generation. */
 export async function generateText(prompt: string, { systemInstruction, temperature, timeoutMs, retries }: GenerateOptions = {}) {
   return withRetry(async () => {
-    const result = await getGeminiModel({ systemInstruction, temperature, timeoutMs }).generateContent(prompt)
+    const result = await getGeminiModel({ systemInstruction, temperature, timeoutMs }).generateContent(sanitizePrompt(prompt))
     const text = result.response.text().trim()
     // an empty body is a transient hiccup, worth another try
-    if (!text) throw new GeminiError("bad_response", "Gemini returned an empty response.", 502, true)
+    if (!text) throw new GeminiError("bad_response", "Generation failed. Try again or adjust your prompt.", 502, true)
     return text
   }, retries === undefined ? undefined : { retries })
 }
@@ -149,12 +157,12 @@ export async function generateText(prompt: string, { systemInstruction, temperat
 /** One-shot generation constrained to a JSON schema; returns the parsed value. */
 export async function generateJSON<T>(prompt: string, schema: ResponseSchema, { systemInstruction, temperature }: GenerateOptions = {}) {
   return withRetry(async () => {
-    const result = await getGeminiModel({ systemInstruction, temperature, json: { schema } }).generateContent(prompt)
+    const result = await getGeminiModel({ systemInstruction, temperature, json: { schema } }).generateContent(sanitizePrompt(prompt))
     const text = result.response.text().trim()
     try {
       return JSON.parse(text) as T
     } catch {
-      throw new GeminiError("bad_response", "Gemini returned malformed data. Try again.", 502, true)
+      throw new GeminiError("bad_response", "Generation failed. Try again or adjust your prompt.", 502, true)
     }
   })
 }

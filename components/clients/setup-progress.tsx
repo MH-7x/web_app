@@ -93,7 +93,7 @@ export function SetupProgress({ client, steps }: { client: SetupClient; steps: S
           <li key={s.id} className={cn("flex items-start gap-3 rounded-lg px-4 py-3 ring-1 ring-foreground/10", s.status.state === "error" && "bg-destructive/5 ring-destructive/30")}>
             <span className="mt-0.5">
               {s.status.state === "running" ? (
-                <Loader2 className="size-4 animate-spin text-primary" />
+                <Loader2 aria-label="Loading" className="size-4 animate-spin text-primary" />
               ) : s.status.state === "done" ? (
                 <Check className="size-4 text-emerald-600 dark:text-emerald-400" />
               ) : s.status.state === "error" ? (

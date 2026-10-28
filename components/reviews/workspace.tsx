@@ -223,7 +223,7 @@ function Empty({ summary, filtered, clients, defaultClientId, onAdded, onImporte
     return <EmptyState icon={MessageCircle} title="No reviews match these filters" description="Try a different rating or status." />
   }
   return (
-    <EmptyState icon={MessageCircle} title="No reviews yet" description="Copy a review from Google Maps or your Business Profile and add it here. You can then draft a reply, copy it back into Google and track what is answered.">
+    <EmptyState icon={MessageCircle} title="No reviews yet" description="Import reviews or connect a client's place ID to fetch them. You can also copy one from Google Maps and add it here, then draft a reply, copy it back into Google and track what is answered.">
       <AddReviewDialog clients={clients} defaultClientId={defaultClientId} onAdded={onAdded} onImported={onImported} />
     </EmptyState>
   )

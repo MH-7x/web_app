@@ -54,7 +54,7 @@ export function ProposalView({ project: initial, business, dateLabel }: { projec
       setProject((p) => ({ ...p, proposal: b.proposal }))
       setDraft(b.proposal)
       setEditing(false)
-      toast.success("Proposal generated")
+      toast.success("Proposal generated — review below")
     })
 
   const changeStatus = (status: ProjectStatus) => run("status", () => save({ status }).then(() => void toast.success(`Marked as ${status}`)))

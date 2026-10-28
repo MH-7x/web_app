@@ -44,7 +44,7 @@ export function Markdown({ source }: { source: string }) {
     }
 
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-      blocks.push(<hr key={key++} className="my-4 border-black/20" />)
+      blocks.push(<hr key={key++} className="my-4 border-border" />)
       i++
       continue
     }
@@ -61,7 +61,7 @@ export function Markdown({ source }: { source: string }) {
             <thead>
               <tr>
                 {head.map((h, n) => (
-                  <th key={n} className={`border border-black/20 bg-black/5 px-3 py-1.5 font-semibold ${align[n] ?? "text-left"}`}>
+                  <th key={n} className={`border border-border bg-muted px-3 py-1.5 font-semibold ${align[n] ?? "text-left"}`}>
                     {inline(h)}
                   </th>
                 ))}
@@ -71,7 +71,7 @@ export function Markdown({ source }: { source: string }) {
               {body.map((row, r) => (
                 <tr key={r}>
                   {head.map((_, n) => (
-                    <td key={n} className={`border border-black/20 px-3 py-1.5 align-top ${align[n] ?? "text-left"}`}>
+                    <td key={n} className={`border border-border px-3 py-1.5 align-top ${align[n] ?? "text-left"}`}>
                       {inline(row[n] ?? "")}
                     </td>
                   ))}

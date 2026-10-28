@@ -556,7 +556,7 @@ async function History({ clientId, total, type, q, now }: { clientId: string; to
           <EmptyState
             icon={FileText}
             title={total === 0 ? "No content generated yet" : "No content matches your filters"}
-            description={total === 0 ? "Everything you generate for this client is saved here: descriptions, FAQs, blog posts, ads and reports." : "Try another type or search term."}
+            description={total === 0 ? "Generate content for this client from the Content module. Everything you generate is saved here: descriptions, FAQs, blog posts, ads and reports." : "Try another type or search term."}
             className="border-0 bg-transparent py-14"
           >
             {total === 0 && (

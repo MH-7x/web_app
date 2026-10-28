@@ -1,6 +1,5 @@
 "use client"
 
-import Papa from "papaparse"
 import { Download, KeyRound, Loader2, Plus, Trash2, Upload } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -124,8 +123,9 @@ export function KeywordsWorkspace({ initialGroups, clients, activeClientId }: { 
     }
   }
 
-  function exportCsv() {
+  async function exportCsv() {
     if (!group) return
+    const { default: Papa } = await import("papaparse")
     const csv = Papa.unparse({
       fields: ["Keyword", "Avg. monthly searches", "Three month change", "Competition", "Top of page bid (low range)", "Top of page bid (high range)"],
       data: group.keywords.map((k) => [k.keyword, k.avgMonthlySearches, k.threeMonthChange, k.competition, k.topOfPageBidLow, k.topOfPageBidHigh]),
@@ -164,7 +164,7 @@ export function KeywordsWorkspace({ initialGroups, clients, activeClientId }: { 
             </FilterChip>
           ))}
         </div>
-        {groups.length === 0 && <p className="rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground">No groups yet. Create one, then upload a Keyword Planner export.</p>}
+        {groups.length === 0 && <p className="rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground">Create your first keyword group, then upload a Keyword Planner export.</p>}
         <nav className="space-y-4">
           {sections.map((s) => (
             <div key={s.id} className="space-y-1">
@@ -193,7 +193,7 @@ export function KeywordsWorkspace({ initialGroups, clients, activeClientId }: { 
         {!selectedId ? (
           <div className="flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-20 text-center ring-1 ring-foreground/10">
             <KeyRound className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">Your keyword library is empty</p>
+            <p className="font-medium">Create your first keyword group</p>
             <p className="max-w-md text-sm text-muted-foreground">Create a group, such as &quot;Dubai Location Keywords&quot;, then upload the CSV you exported from Google Keyword Planner.</p>
             <Button onClick={() => setCreating(true)}>
               <Plus /> New Group
@@ -228,7 +228,7 @@ export function KeywordsWorkspace({ initialGroups, clients, activeClientId }: { 
       <input
         ref={fileInput}
         type="file"
-        accept=".csv,.tsv,.txt,.xlsx,.xls"
+        accept=".csv,.xlsx"
         className="sr-only"
         tabIndex={-1}
         aria-hidden

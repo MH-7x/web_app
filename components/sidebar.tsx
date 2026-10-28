@@ -77,7 +77,7 @@ function SidebarView({ pathname }: { pathname: string }) {
         </span>
       </Link>
 
-      <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto p-2">
+      <nav aria-label="Main navigation" className="flex-1 space-y-0.5 overflow-y-auto p-2">
         {NAV.map((item) => (
           <NavLink key={item.href} {...item} active={isActive(item.href)} />
         ))}

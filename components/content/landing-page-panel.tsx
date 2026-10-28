@@ -18,7 +18,7 @@ import { buildLandingHtml } from "@/lib/landing-page-html"
 import { MAX_KEYWORD_LENGTH, MAX_SECONDARY_KEYWORDS, PAGE_TYPES, countPlaceholders, landingMarkdown, type LandingOptions, type LandingPage, type LandingPageType, type LandingResult } from "@/lib/landing-page-types"
 import { cn } from "@/lib/utils"
 
-type Generated = { language: Language; options: LandingOptions; result: LandingResult }
+type Generated = { language: Language; options: LandingOptions; result: LandingResult; warning?: string }
 
 const LANDING_LANGUAGES = ["en", "ar"] as const
 type LandingLanguage = (typeof LANDING_LANGUAGES)[number]
@@ -139,6 +139,7 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
       setDirty(false)
       setEditing(false)
       toast.success("Landing page generated", { description: "Review it, then save it to the client's history." })
+      if (body.warning) toast.warning(body.warning)
     } catch (e) {
       if (controller.signal.aborted) return
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again."

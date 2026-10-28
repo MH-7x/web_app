@@ -59,6 +59,8 @@ web_app
 │  │  │     ├─ checklist
 │  │  │     │  └─ route.ts
 │  │  │     ├─ citations
+│  │  │     │  ├─ check-link
+│  │  │     │  │  └─ route.ts
 │  │  │     │  ├─ competitors
 │  │  │     │  │  └─ route.ts
 │  │  │     │  ├─ plan
@@ -229,8 +231,11 @@ web_app
 │  ├─ category-badge.tsx
 │  ├─ citations
 │  │  ├─ action-plan.tsx
+│  │  ├─ backlink-dialog.tsx
+│  │  ├─ backlinks-table.tsx
 │  │  ├─ competitors-panel.tsx
 │  │  ├─ my-citations.tsx
+│  │  ├─ nap-table.tsx
 │  │  ├─ overview.tsx
 │  │  ├─ parts.tsx
 │  │  ├─ quick-check-dialog.tsx
@@ -410,8 +415,11 @@ web_app
 │  ├─ keyword-groups.ts
 │  ├─ keyword-import.ts
 │  ├─ keywords-types.ts
+│  ├─ landing-content.ts
 │  ├─ landing-page-html.ts
 │  ├─ landing-page-types.ts
+│  ├─ landing-requirements.ts
+│  ├─ link-check.ts
 │  ├─ onboarding-checklist-types.ts
 │  ├─ onboarding-checklist.ts
 │  ├─ onboarding-templates.ts

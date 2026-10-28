@@ -1,3 +1,4 @@
+import { GeminiKeyBanner } from "@/components/gemini-key-banner"
 import type { Metadata } from "next"
 import { cookies } from "next/headers"
 import { Suspense } from "react"
@@ -13,6 +14,9 @@ export default function HumanizerPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <h1 className="text-2xl font-semibold tracking-tight">Humanizer</h1>
+      <Suspense fallback={null}>
+        <GeminiKeyBanner />
+      </Suspense>
       <Suspense fallback={<HumanizerSkeleton />}>
         <ActiveClientHumanizer />
       </Suspense>

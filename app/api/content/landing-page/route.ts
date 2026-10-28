@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     if (!client) return fail("That client no longer exists.", 404)
 
     const result = await generateLandingPage(client, { ...options, language })
-    return NextResponse.json({ language, options, result })
+    const warning = client.companyProfile.trim() ? undefined : "This client has no company profile, so the page may be generic. Add one on the client profile."
+    return NextResponse.json({ language, options, result, warning })
   } catch (error) {
     return handleError(error, "content/landing-page")
   }

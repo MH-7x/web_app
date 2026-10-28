@@ -98,7 +98,7 @@ export function ActivityTimeline({ clientId }: { clientId: string }) {
           title={items.length === 0 ? "No activity yet" : "Nothing matches this filter"}
           description={
             items.length === 0
-              ? "Generated content, ads, GBP posts and SEO audits for this client will show up here."
+              ? "No activity recorded yet. Generated content, ads, GBP posts and SEO audits for this client will show up here."
               : "Pick another filter to see the rest of the activity."
           }
           className="border-0 bg-transparent py-12"

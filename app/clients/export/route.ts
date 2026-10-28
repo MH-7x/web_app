@@ -1,4 +1,5 @@
 import { listAllClients } from "@/lib/clients"
+import { handleError } from "@/lib/gbp-posts-api"
 import { asStringArray, displayDomain, formatPhone } from "@/lib/client-schema"
 
 const cell = (value: string) => {
@@ -8,6 +9,14 @@ const cell = (value: string) => {
 }
 
 export async function GET(request: Request) {
+  try {
+    return await buildExport(request)
+  } catch (error) {
+    return handleError(error, "clients/export")
+  }
+}
+
+async function buildExport(request: Request) {
   const { searchParams } = new URL(request.url)
   const clients = await listAllClients({
     q: searchParams.get("q") ?? undefined,

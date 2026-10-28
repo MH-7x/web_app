@@ -108,7 +108,7 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
       <div className="flex flex-col items-center gap-3 rounded-xl bg-card px-6 py-20 text-center ring-1 ring-foreground/10">
         <Users className="size-8 text-muted-foreground/60" />
         <p className="font-medium">Select a client to audit their website</p>
-        <p className="max-w-md text-sm text-muted-foreground">Pick a client from the selector in the top bar. The audit crawls the website saved on their profile.</p>
+        <p className="max-w-md text-sm text-muted-foreground">Select a client from the dropdown above to use this module. The audit crawls the website saved on their profile.</p>
         <Link href="/clients/new" className={buttonVariants({ variant: "outline", size: "lg" })}>
           Add a client
         </Link>

@@ -79,7 +79,7 @@ export function AuditRunner({ clientId, website, lastCrawled, activeJob }: { cli
         }
         if (body.job.status === "completed" && body.job.auditId && finished.current !== body.job.id) {
           finished.current = body.job.id
-          toast.success("SEO audit complete", { description: "The report is ready below." })
+          toast.success(body.job.message.startsWith("Audit complete") ? body.job.message : "Audit complete", { description: "The report is ready below." })
           router.replace(`/seo?audit=${body.job.auditId}`)
           router.refresh()
         }
@@ -108,6 +108,7 @@ export function AuditRunner({ clientId, website, lastCrawled, activeJob }: { cli
       const body = (await res.json().catch(() => null)) as { job?: JobSnapshot; error?: string } | null
       if (!res.ok || !body?.job) throw new Error(body?.error ?? `Request failed (${res.status}).`)
       setJob(body.job)
+      toast.success("Audit started — this takes 8-15 minutes")
       sinceRef.current = 0
       mergeLog(body.job)
     } catch (e) {
