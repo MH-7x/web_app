@@ -4,11 +4,11 @@ import { fleschReadingEase, syllables } from "@/lib/audit/text"
 import { normalizeSerpBrief, parseCompetitorUrls, readingTarget, wordTarget, type SerpBrief } from "@/lib/competitor-types"
 import { EMIRATES } from "@/lib/constants"
 import { BadRequestError, META_DESCRIPTION_MAX, META_TITLE_MAX, parseLanguage, type Language, type Localized } from "@/lib/content-types"
+import { allHeadings, cleanContent, contentWords, ctaLines, faqItems, legacyToContent, parseContent, plainText, processSteps, readableText, repeatedSentences, wordsBeforeFirstCta } from "@/lib/landing-content"
 
 export const PAGE_TYPES = [
   { value: "service", label: "Service page", guide: "A page for one service across the target emirate. The visitor searched for this service, so lead with it and show exactly how the company delivers it." },
-  { value: "area", label: "Area page", guide: "A page for the service in one location. Lead with the location and the service together, and use area-specific detail (access, buildings, communities, travel time) only when the company profile provides it." },
-  { value: "offer", label: "Offer page", guide: "A page for a specific offer or promotion. Lead with the offer. Use only the offer terms given in the company profile; where they are missing, write [PLACEHOLDER: add your offer details]." },
+  { value: "area", label: "Area page", guide: "A page for the company's services in one area or community. Lead with the location and what the company does there, covering its main services rather than a single one. Use area-specific detail (access, buildings, communities, travel time) only when the company profile provides it." },
 ] as const
 export type LandingPageType = (typeof PAGE_TYPES)[number]["value"]
 
@@ -16,7 +16,10 @@ export type LandingOptions = {
   primaryKeyword: string
   secondaryKeywords: string[]
   emirate: string
+  /** the service a service page is for; empty on an area page */
   service: string
+  /** the area an area page is for; empty on a service page */
+  area: string
   pageType: LandingPageType
   /** competitor pages the brief was built from, kept for reference */
   competitorUrls: string[]
@@ -27,27 +30,11 @@ export type LandingOptions = {
 export const MAX_SECONDARY_KEYWORDS = 5
 export const MAX_KEYWORD_LENGTH = 100
 
-export type ProcessStep = {
-  title: string
-  description: string
-  /** the step was proposed by the AI rather than taken from the company profile, so the client must confirm it */
-  confirm: boolean
-}
-
-/** Where an additional section sits: after the service details, after the process, or after the social proof. */
-export type ExtraPlacement = "service" | "process" | "proof"
-
-/** A section the ranking pages have that the fixed layout does not: accreditations, areas covered, guides, extra services... */
-export type ExtraSection = { heading: string; paragraphs: string[]; placement: ExtraPlacement }
-
-/** Which part of the page covers one of the sections the competitor analysis found. */
+/** Which part of the page covers one of the sections the competitor analysis found: the heading of the section, or "intro". */
 export type SectionCoverage = { section: string; location: string }
 
-/** The fixed sections a competitor section can be covered by. Anything else is an additional section's heading. */
-export const FIXED_LOCATIONS = ["hero", "benefits", "service", "process", "proof", "faq", "cta"] as const
-
 export type ImagePlanItem = {
-  /** where on the page: hero, benefits, service, process, proof or cta */
+  /** where on the page: intro, or the heading of the section the image sits in */
   placement: string
   /** what the photo should show, to brief the client or the photographer */
   subject: string
@@ -64,17 +51,10 @@ export type LandingPage = {
   /** the secondary keywords as the page uses them (translated, on a page written in another language) */
   secondaryUsed: string[]
   meta: { title: string; description: string; slug: string; h1: string }
-  hero: { headline: string; subheadline: string; cta: string; trustBadges: string[] }
-  headings: { benefits: string; service: string; process: string; socialProof: string; faq: string }
-  benefits: { icon: string; heading: string; description: string }[]
-  serviceDetails: string[]
-  process: ProcessStep[]
-  additionalSections: ExtraSection[]
-  /** one entry for each section the competitor analysis listed, saying where this page covers it */
+  /** everything on the page below the H1 as one markdown document: intro, benefits, service, process, reviews, FAQ, call to action. See lib/landing-content.ts */
+  content: string
+  /** one entry for each section the competitor analysis listed, saying which part of the page covers it */
   sectionCoverage: SectionCoverage[]
-  socialProof: { testimonials: { quote: string; name: string; detail: string }[]; stats: { value: string; label: string }[] }
-  faq: { question: string; answer: string }[]
-  cta: { headline: string; description: string; phoneButton: string; whatsappButton: string }
   technicalSeo: { schema: string; internalLinks: { anchor: string; page: string }[] }
   imagePlan: { rationale: string; images: ImagePlanItem[] }
 }
@@ -90,10 +70,13 @@ const strings = (v: unknown) => list(v).map(text).filter(Boolean)
 const objects = (v: unknown) => list(v).filter(isObject)
 
 export function parseLandingRequest(body: Record<string, unknown>) {
-  return { language: parseLanguage(body.language), options: parseLandingOptions(body.options) }
+  const language = parseLanguage(body.language)
+  // a page is written in one language; "both" only exists on pages saved before that was the rule
+  if (language === "both") throw new BadRequestError("Choose English or Arabic.")
+  return { language, options: parseLandingOptions(body.options) }
 }
 
-/** The keyword, emirate, service and page type fields, which the competitor analysis shares with generation. */
+/** The keyword, emirate, page type and service or area fields, which the competitor analysis shares with generation. */
 export function parseBriefOptions(raw: unknown): Omit<LandingOptions, "competitorUrls" | "serpBrief"> {
   const o = isObject(raw) ? raw : {}
   const primaryKeyword = text(o.primaryKeyword).replace(/\s+/g, " ")
@@ -107,12 +90,15 @@ export function parseBriefOptions(raw: unknown): Omit<LandingOptions, "competito
 
   const emirate = text(o.emirate)
   if (!(EMIRATES as readonly string[]).includes(emirate)) throw new BadRequestError("Choose an emirate.")
-  const service = text(o.service).slice(0, 100)
-  if (!service) throw new BadRequestError("Choose the service this page is for.")
   const pageType = PAGE_TYPES.find((p) => p.value === o.pageType)?.value
   if (!pageType) throw new BadRequestError("Choose a page type.")
+  // a service page is about one service, an area page about one area: the other field is dropped
+  const service = pageType === "service" ? text(o.service).slice(0, 100) : ""
+  if (pageType === "service" && !service) throw new BadRequestError("Choose the service this page is for.")
+  const area = pageType === "area" ? text(o.area).slice(0, 100) : ""
+  if (pageType === "area" && !area) throw new BadRequestError("Choose the area this page is for.")
 
-  return { primaryKeyword, secondaryKeywords, emirate, service, pageType }
+  return { primaryKeyword, secondaryKeywords, emirate, service, area, pageType }
 }
 
 export function parseLandingOptions(raw: unknown): LandingOptions {
@@ -131,14 +117,10 @@ function normalizeImage(raw: Record<string, unknown>): ImagePlanItem {
   }
 }
 
-/** Coerce model output (or a stored copy) into a LandingPage; null when there is nothing usable. */
+/** Coerce model output (or a stored copy) into a LandingPage; null when there is nothing usable. Pages saved with a field for each part are converted. */
 export function normalizeLandingPage(raw: unknown): LandingPage | null {
   if (!isObject(raw)) return null
   const meta = isObject(raw.meta) ? raw.meta : {}
-  const hero = isObject(raw.hero) ? raw.hero : {}
-  const headings = isObject(raw.headings) ? raw.headings : {}
-  const proof = isObject(raw.socialProof) ? raw.socialProof : {}
-  const cta = isObject(raw.cta) ? raw.cta : {}
   const tech = isObject(raw.technicalSeo) ? raw.technicalSeo : {}
   const plan = isObject(raw.imagePlan) ? raw.imagePlan : {}
 
@@ -146,37 +128,15 @@ export function normalizeLandingPage(raw: unknown): LandingPage | null {
   // pages saved before the image plan existed only had a list of alt texts
   if (!images.length && Array.isArray(tech.imageAlts)) images = strings(tech.imageAlts).map((alt) => ({ placement: "", subject: "", filename: "", alt, size: "", loading: "lazy" as const }))
 
+  const content = typeof raw.content === "string" && raw.content.trim() ? cleanContent(raw.content) : legacyToContent(raw)
   const page: LandingPage = {
     keywordUsed: text(raw.keywordUsed),
     secondaryUsed: strings(raw.secondaryUsed),
     meta: { title: text(meta.title), description: text(meta.description), slug: text(meta.slug), h1: text(meta.h1) },
-    hero: { headline: text(hero.headline), subheadline: text(hero.subheadline), cta: text(hero.cta), trustBadges: strings(hero.trustBadges) },
-    headings: { benefits: text(headings.benefits), service: text(headings.service), process: text(headings.process), socialProof: text(headings.socialProof), faq: text(headings.faq) },
-    benefits: objects(raw.benefits)
-      .map((b) => ({ icon: text(b.icon), heading: text(b.heading), description: text(b.description) }))
-      .filter((b) => b.heading || b.description),
-    serviceDetails: strings(raw.serviceDetails),
-    process: objects(raw.process)
-      .map((s) => ({ title: text(s.title), description: text(s.description), confirm: s.confirm === true }))
-      .filter((s) => s.title || s.description),
-    additionalSections: objects(raw.additionalSections)
-      .map((e) => ({ heading: text(e.heading), paragraphs: strings(e.paragraphs), placement: (e.placement === "service" || e.placement === "proof" ? e.placement : "process") as ExtraPlacement }))
-      .filter((e) => e.heading || e.paragraphs.length),
+    content,
     sectionCoverage: objects(raw.sectionCoverage)
       .map((c) => ({ section: text(c.section), location: text(c.location) }))
       .filter((c) => c.section),
-    socialProof: {
-      testimonials: objects(proof.testimonials)
-        .map((t) => ({ quote: text(t.quote), name: text(t.name), detail: text(t.detail) }))
-        .filter((t) => t.quote),
-      stats: objects(proof.stats)
-        .map((s) => ({ value: text(s.value), label: text(s.label) }))
-        .filter((s) => s.value || s.label),
-    },
-    faq: objects(raw.faq)
-      .map((f) => ({ question: text(f.question), answer: text(f.answer) }))
-      .filter((f) => f.question && f.answer),
-    cta: { headline: text(cta.headline), description: text(cta.description), phoneButton: text(cta.phoneButton), whatsappButton: text(cta.whatsappButton) },
     technicalSeo: {
       schema: text(tech.schema),
       internalLinks: objects(tech.internalLinks)
@@ -185,8 +145,8 @@ export function normalizeLandingPage(raw: unknown): LandingPage | null {
     },
     imagePlan: { rationale: text(plan.rationale), images },
   }
-  // a page with no hero and no body is a failed generation, not a draft to edit
-  return page.meta.title && page.hero.headline && page.serviceDetails.length ? page : null
+  // a page with no title and no body is a failed generation, not a draft to edit
+  return page.meta.title && page.content ? page : null
 }
 
 /** Validate a stored result (both languages optional, at least one present). */
@@ -207,12 +167,12 @@ export const languagesOf = (language: Language): ("en" | "ar")[] => (language ==
 /* ------------------------------------------------------------ SEO checks */
 
 export type SeoCheck = {
-  id: "language" | "sections" | "title" | "description" | "h1" | "first100" | "h2" | "slug" | "alt" | "secondary" | "density" | "process" | "images" | "imagenames" | "readability" | "length" | "placeholders"
+  id: "language" | "sections" | "title" | "description" | "h1" | "first100" | "h2" | "slug" | "alt" | "secondary" | "density" | "process" | "faq" | "cta" | "repetition" | "claims" | "images" | "imagenames" | "readability" | "length" | "placeholders"
   label: string
   /** true passes, false fails, null is informational or could not be judged */
   ok: boolean | null
   detail: string
-  /** a failure here makes the generator try once more */
+  /** a failure here makes the generator revise the page */
   hard: boolean
 }
 
@@ -220,56 +180,35 @@ export const MAX_DENSITY_PERCENT = 2
 export const MIN_PROCESS_STEPS = 3
 export const MIN_IMAGES = 3
 export const MAX_ALT_LENGTH = 125
+/** the first call or WhatsApp button must come within this many words, so the first screen has a way to get in touch */
+export const MAX_WORDS_BEFORE_CTA = 150
+/** lines with a call or WhatsApp button (a line may hold both); a button after every paragraph is noise: one in the intro and one at the end of each section is plenty */
+export const MIN_CTAS = 3
+export const MAX_CTAS = 12
+export const MIN_FAQ = 5
 
 const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim()
 const wordsOf = (s: string) => s.split(/\s+/).filter(Boolean)
 const contains = (haystack: string, phrase: string) => !!phrase && normalize(haystack).includes(normalize(phrase))
-const countOf = (haystack: string, phrase: string) => (phrase ? normalize(haystack).split(normalize(phrase)).length - 1 : 0)
+export const countOf = (haystack: string, phrase: string) => (phrase ? normalize(haystack).split(normalize(phrase)).length - 1 : 0)
 
 export const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-const isLatin = (s: string) => /^[\x20-ɏ]+$/.test(s)
+export const isLatin = (s: string) => /^[\x20-ɏ]+$/.test(s)
 
-const FILLER = new Set(["in", "of", "the", "and", "for", "a", "an", "to", "near"])
+export const FILLER = new Set(["in", "of", "the", "and", "for", "a", "an", "to", "near"])
 
 /** lowercase words joined by hyphens, a known image extension */
 export const IMAGE_FILENAME = /^[a-z0-9]+(?:-[a-z0-9]+)*\.(?:webp|avif|jpg|jpeg|png)$/
 
 export const PLACEHOLDER = /\[PLACEHOLDER:[^\]]*\]/g
 export const countPlaceholders = (page: LandingPage) => (JSON.stringify(page).match(PLACEHOLDER) ?? []).length
-export const countUnconfirmedSteps = (page: LandingPage) => page.process.filter((s) => s.confirm).length
 
-const extraBlocks = (page: LandingPage, slot: ExtraPlacement) => page.additionalSections.filter((e) => e.placement === slot).flatMap((e) => [e.heading, ...e.paragraphs])
-
-/** The visible copy in page order, one string per block. */
-function bodyBlocks(page: LandingPage) {
-  return [
-    page.meta.h1,
-    page.hero.headline,
-    page.hero.subheadline,
-    page.hero.cta,
-    ...page.hero.trustBadges,
-    page.headings.benefits,
-    ...page.benefits.flatMap((b) => [b.heading, b.description]),
-    page.headings.service,
-    ...page.serviceDetails,
-    ...extraBlocks(page, "service"),
-    page.headings.process,
-    ...page.process.flatMap((s) => [s.title, s.description]),
-    ...extraBlocks(page, "process"),
-    page.headings.socialProof,
-    ...page.socialProof.testimonials.map((t) => t.quote),
-    ...page.socialProof.stats.map((s) => `${s.value} ${s.label}`),
-    ...extraBlocks(page, "proof"),
-    page.headings.faq,
-    ...page.faq.flatMap((f) => [f.question, f.answer]),
-    page.cta.headline,
-    page.cta.description,
-  ].filter(Boolean)
-}
+/** The visible copy: the H1 and the body, without markdown syntax. What word counts, density and the first 100 words are measured on. */
+export const bodyText = (page: LandingPage) => `${page.meta.h1}\n${plainText(page.content)}`
 
 /** Share of the letters in the main copy that are Arabic, 0 to 1. */
 function arabicShare(page: LandingPage) {
-  const letters = [page.meta.title, page.meta.h1, page.hero.headline, page.hero.subheadline, ...page.serviceDetails].join(" ").match(/\p{L}/gu) ?? []
+  const letters = [page.meta.title, page.meta.h1, plainText(page.content).slice(0, 2000)].join(" ").match(/\p{L}/gu) ?? []
   return letters.length ? letters.filter((l) => /[؀-ۿ]/.test(l)).length / letters.length : 0
 }
 
@@ -281,20 +220,14 @@ export function scaledWordTarget(brief: SerpBrief | null | undefined, lang: "en"
 }
 
 /** Words of visible copy: what the competitor word counts are compared with. */
-export const landingWordCount = (page: LandingPage) => wordsOf(bodyBlocks(page).join("\n")).length
+export const landingWordCount = (page: LandingPage) => wordsOf(bodyText(page)).length
 
-/** The sentences the reading ease is measured on: every paragraph of running copy, each ended with a full stop. */
-function readableCopy(page: LandingPage) {
-  return [page.hero.subheadline, ...page.serviceDetails, ...page.benefits.map((b) => b.description), ...page.process.map((st) => st.description), ...page.additionalSections.flatMap((e) => e.paragraphs), ...page.faq.map((f) => f.answer), page.cta.description]
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => (/[.!?؟]$/.test(t) ? t : t + "."))
-    .join(" ")
-}
+/** How many FAQ questions the page needs: at least 5, and as many as the ranking pages have (up to 8). */
+export const faqTarget = (brief: SerpBrief | null | undefined) => Math.max(MIN_FAQ, Math.min(8, brief?.benchmark.faqMedian ?? 0))
 
 /** What to rewrite to make the English easier to read: the longest sentences and the hardest words. */
 export function readabilityHints(page: LandingPage) {
-  const copy = readableCopy(page)
+  const copy = readableText(page.content)
   const sentences = copy.split(/(?<=[.!?])\s+/).map((t) => t.trim()).filter(Boolean)
   const letters = copy.match(/[A-Za-z']+/g) ?? []
   const long = sentences
@@ -312,19 +245,48 @@ export function readabilityHints(page: LandingPage) {
   return { long, hard, averageSentence: sentences.length ? Math.round(letters.length / sentences.length) : 0 }
 }
 
+/**
+ * Claims a page cannot make without proof: rankings and superlatives (Google Ads also rejects them), and what customers say, which only a
+ * real review can support. English and Arabic. The keywords themselves are left out, so a keyword like "best movers" does not flag itself.
+ */
+const CLAIM =
+  /(?:\b(?:best|top[- ]rated|top (?:villa|home|house|moving|movers|service|company|team|quality)|leading|number one|cheapest|guaranteed|unbeatable|finest|premier|world[- ]class|five[- ]star|5[- ]star|(?:customers|clients|homeowners) (?:say|tell us|love|praise|rave|rate))\b|#1)/gi
+
+const CLAIM_AR = /(?<!\p{L})(?:أفضل|الأفضل|الأرخص|رقم واحد|رقم 1|الرائد|الرائدة)(?!\p{L})/u
+
+export function unprovenClaims(page: LandingPage, keywords: string[]): string[] {
+  let text = `${page.meta.title}\n${page.meta.description}\n${bodyText(page)}`
+  for (const k of keywords.filter(Boolean)) text = text.split(new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig")).join(" ")
+  const found = new Set<string>()
+  for (const sentence of text.split(/(?<=[.!?])\s+|\n/)) {
+    CLAIM.lastIndex = 0
+    const m = CLAIM.exec(sentence) ?? CLAIM_AR.exec(sentence)
+    if (m) found.add(sentence.trim().length > 110 ? sentence.trim().slice(Math.max(0, m.index - 40), m.index + 70) : sentence.trim())
+  }
+  return [...found]
+}
+
+const MIN_SECTION_WORDS = 50
+/** Sections an old page recorded as "hero", "faq"... are trusted: they were checked when the page was made. */
+const LEGACY_LOCATIONS = new Set(["hero", "benefits", "service", "process", "proof", "faq", "cta"])
+const resembles = (a: string, b: string) => !!a && !!b && (a.includes(b) || b.includes(a))
+
 /** The competitor sections this page does not cover, as short problem statements. Empty when all are covered. */
 export function coverageProblems(page: LandingPage, required: string[]): string[] {
-  const headings = page.additionalSections.map((e) => normalize(e.heading))
+  const { intro, sections } = parseContent(page.content)
+  const sectionFor = (heading: string) => sections.find((s) => normalize(s.heading) === heading) ?? sections.find((s) => resembles(normalize(s.heading), heading))
   return required.flatMap((req) => {
     const want = normalize(req)
     const entry = page.sectionCoverage.find((c) => {
       const have = normalize(c.section)
-      return have === want || have.includes(want) || want.includes(have)
+      return have === want || resembles(have, want)
     })
-    if (!entry) return [`"${req}" is not listed in sectionCoverage`]
-    const where = normalize(entry.location)
-    if ((FIXED_LOCATIONS as readonly string[]).includes(where) || headings.includes(where)) return []
-    return [`"${req}" points to "${entry.location}", which is neither a fixed section nor the heading of one of your additional sections`]
+    const where = entry ? normalize(entry.location) : ""
+    if (where === "intro") return contentWords(intro) >= 30 ? [] : [`"${req}" is covered by the intro, which is too short`]
+    if (entry && LEGACY_LOCATIONS.has(where)) return []
+    const section = (where && sectionFor(where)) || sections.find((s) => resembles(normalize(s.heading), want))
+    if (!section) return [entry ? `"${req}" is meant to be covered by the section "${entry.location}", which is not on the page` : `"${req}" is not covered by any section`]
+    return section.words >= MIN_SECTION_WORDS ? [] : [`"${req}" is covered only by a ${section.words}-word section ("${section.heading}")`]
   })
 }
 
@@ -332,8 +294,7 @@ type CheckOptions = Pick<LandingOptions, "primaryKeyword" | "secondaryKeywords">
 
 export function checkLandingPage(page: LandingPage, options: CheckOptions, lang: "en" | "ar" = "en"): SeoCheck[] {
   const primary = page.keywordUsed || options.primaryKeyword
-  const blocks = bodyBlocks(page)
-  const body = blocks.join("\n")
+  const body = bodyText(page)
   const total = wordsOf(body).length
   const first100 = wordsOf(body).slice(0, 100).join(" ")
   const titleLen = page.meta.title.length
@@ -341,13 +302,20 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
   const uses = countOf(body, primary)
   const density = total ? (uses / total) * 100 : 0
   const keywordSlug = slugify(primary)
-  const h2s = [page.headings.service, page.headings.benefits, page.headings.process, page.headings.socialProof, page.headings.faq, ...page.additionalSections.map((e) => e.heading)].filter(Boolean)
+  const h2s = parseContent(page.content).sections.map((s) => s.heading)
+  const headings = allHeadings(page.content)
   const secondaryKeywords = page.secondaryUsed.length ? page.secondaryUsed : options.secondaryKeywords
   const secondary = secondaryKeywords.map((k) => ({ k, found: contains(body, k) }))
   const missing = secondary.filter((s) => !s.found).map((s) => s.k)
   const placeholders = countPlaceholders(page)
-  const unconfirmed = countUnconfirmedSteps(page)
   const share = arabicShare(page)
+  const steps = processSteps(page.content)
+  const faq = faqItems(page.content)
+  const faqNeeded = faqTarget(options.serpBrief)
+  const ctas = ctaLines(page.content)
+  const beforeCta = wordsBeforeFirstCta(page.content)
+  const repeated = repeatedSentences(page.content)
+  const claims = unprovenClaims(page, [primary, ...secondaryKeywords])
 
   const images = page.imagePlan.images
   const altsWithKeyword = images.filter((i) => contains(i.alt, primary)).length
@@ -358,7 +326,7 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
   const keywordTokens = keywordSlug.split("-").filter((t) => t && !FILLER.has(t))
   const nameHasKeyword = !isLatin(primary) || images.some((i) => keywordTokens.every((t) => i.filename.split(/[-.]/).includes(t)))
 
-  const ease = lang === "en" ? fleschReadingEase(readableCopy(page)) : null
+  const ease = lang === "en" ? fleschReadingEase(readableText(page.content)) : null
   const easeTarget = readingTarget(options.serpBrief)
   const target = scaledWordTarget(options.serpBrief, lang)
   const minWords = target.min
@@ -399,7 +367,7 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
       id: "h2",
       label: "Primary keyword in an H2",
       ok: h2s.some((h) => contains(h, primary)),
-      detail: h2s.find((h) => contains(h, primary)) ?? (h2s[0] ? `Not in any of ${h2s.length} H2s, e.g. "${page.headings.service || h2s[0]}"` : "No H2"),
+      detail: h2s.find((h) => contains(h, primary)) ?? (h2s[0] ? `Not in any of ${h2s.length} H2s, e.g. "${h2s[0]}"` : "No H2"),
       hard: true,
     },
     isLatin(primary) || /^[a-z0-9-]+$/.test(page.meta.slug)
@@ -422,8 +390,8 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
       id: "secondary",
       label: "Secondary keywords used in the body",
       ok: secondary.length ? missing.length === 0 : null,
-      detail: secondary.length ? (missing.length ? `Missing: ${missing.join(", ")}` : `${secondary.length} of ${secondary.length} used`) : "No secondary keywords given",
-      hard: false,
+      detail: secondary.length ? (missing.length ? `Missing: ${missing.join(", ")}` : `${secondary.length} of ${secondary.length} used${headings.some((h) => secondary.some((s) => contains(h, s.k))) ? ", one in a heading" : ""}`) : "No secondary keywords given",
+      hard: true,
     },
     {
       id: "density",
@@ -435,8 +403,36 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
     {
       id: "process",
       label: `Process section with ${MIN_PROCESS_STEPS}+ steps`,
-      ok: page.process.length >= MIN_PROCESS_STEPS && !!page.headings.process,
-      detail: `${page.process.length} steps${unconfirmed ? `, ${unconfirmed} to confirm with the client` : ""}`,
+      ok: steps.length >= MIN_PROCESS_STEPS,
+      detail: `${steps.length} steps`,
+      hard: true,
+    },
+    {
+      id: "faq",
+      label: `FAQ with ${faqNeeded}+ questions`,
+      ok: faq.length >= faqNeeded,
+      detail: `${faq.length} questions${options.serpBrief?.benchmark.faqMedian ? `; ranking pages: ${options.serpBrief.benchmark.faqMedian}` : ""}`,
+      hard: true,
+    },
+    {
+      id: "cta",
+      label: "Call and WhatsApp buttons, from the first screen on",
+      ok: ctas >= MIN_CTAS && ctas <= MAX_CTAS && beforeCta !== null && beforeCta <= MAX_WORDS_BEFORE_CTA,
+      detail: ctas ? `${ctas} lines with buttons (${MIN_CTAS} to ${MAX_CTAS}); the first after ${beforeCta} words` : "No call or WhatsApp button in the copy",
+      hard: true,
+    },
+    {
+      id: "repetition",
+      label: "No sentence repeated on the page",
+      ok: repeated.length === 0,
+      detail: repeated.length ? `${repeated.length} repeated, e.g. "${repeated[0].slice(0, 70)}…"` : "Every sentence is new",
+      hard: true,
+    },
+    {
+      id: "claims",
+      label: "No unproven claims (best, top, leading, what customers say)",
+      ok: claims.length === 0,
+      detail: claims.length ? `${claims.length} found, e.g. "${claims[0]}"` : "None found",
       hard: true,
     },
     {
@@ -458,7 +454,7 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
       ]
         .filter(Boolean)
         .join("; ") || "File names and alt texts look right",
-      hard: false,
+      hard: true,
     },
     {
       id: "readability",
@@ -484,11 +480,8 @@ export function checkLandingPage(page: LandingPage, options: CheckOptions, lang:
     {
       id: "placeholders",
       label: "Facts to fill in or confirm",
-      ok: placeholders === 0 && unconfirmed === 0 ? true : null,
-      detail:
-        placeholders === 0 && unconfirmed === 0
-          ? "None"
-          : [placeholders && `${placeholders} [PLACEHOLDER] marker${placeholders === 1 ? "" : "s"} to replace`, unconfirmed && `${unconfirmed} process step${unconfirmed === 1 ? "" : "s"} to confirm with the client`].filter(Boolean).join("; "),
+      ok: placeholders === 0 ? true : null,
+      detail: placeholders === 0 ? "None" : `${placeholders} [PLACEHOLDER] marker${placeholders === 1 ? "" : "s"} to replace`,
       hard: false,
     },
   ]
@@ -498,18 +491,11 @@ export const failedHardChecks = (checks: SeoCheck[]) => checks.filter((c) => c.h
 
 /* ---------------------------------------------------------------- markdown */
 
-export type LandingSection = "meta" | "hero" | "benefits" | "service" | "process" | "extra" | "proof" | "faq" | "cta" | "technical" | "images"
+export type LandingSection = "meta" | "content" | "technical" | "images"
 
 export const LANDING_SECTIONS: { id: LandingSection; label: string }[] = [
   { id: "meta", label: "Meta & SEO" },
-  { id: "hero", label: "Hero" },
-  { id: "benefits", label: "Benefits" },
-  { id: "service", label: "Service Details" },
-  { id: "process", label: "Process" },
-  { id: "extra", label: "Additional Sections" },
-  { id: "proof", label: "Social Proof" },
-  { id: "faq", label: "FAQ" },
-  { id: "cta", label: "Call to Action" },
+  { id: "content", label: "Page Content" },
   { id: "technical", label: "Technical SEO" },
   { id: "images", label: "Image Plan" },
 ]
@@ -518,33 +504,8 @@ export function sectionMarkdown(page: LandingPage, section: LandingSection): str
   switch (section) {
     case "meta":
       return [`- **Title tag:** ${page.meta.title}`, `- **Meta description:** ${page.meta.description}`, `- **URL slug:** /${page.meta.slug}`, `- **H1:** ${page.meta.h1}`].join("\n")
-    case "hero":
-      return [`# ${page.meta.h1}`, `**${page.hero.headline}**`, page.hero.subheadline, `[${page.hero.cta}]`, page.hero.trustBadges.length ? `Trust badges: ${page.hero.trustBadges.join(" | ")}` : ""].filter(Boolean).join("\n\n")
-    case "benefits":
-      return [`## ${page.headings.benefits}`, ...page.benefits.map((b) => `### ${b.heading}\n_Icon: ${b.icon}_\n\n${b.description}`)].join("\n\n")
-    case "service":
-      return [`## ${page.headings.service}`, ...page.serviceDetails].join("\n\n")
-    case "process":
-      return [`## ${page.headings.process}`, ...page.process.map((s, i) => `${i + 1}. **${s.title}**${s.confirm ? " _(confirm with client)_" : ""}\n   ${s.description}`)].join("\n\n")
-    case "extra":
-      return [
-        ...page.additionalSections.map((e) => [`## ${e.heading}`, ...e.paragraphs].join("\n\n")),
-        page.sectionCoverage.length ? "**Where the sections the ranking pages share are covered:**\n" + page.sectionCoverage.map((c) => `- ${c.section} → ${c.location}`).join("\n") : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-    case "proof":
-      return [
-        `## ${page.headings.socialProof}`,
-        page.socialProof.stats.length ? page.socialProof.stats.map((s) => `- **${s.value}** ${s.label}`).join("\n") : "",
-        ...page.socialProof.testimonials.map((t) => `> ${t.quote}\n>\n> ${[t.name, t.detail].filter(Boolean).join(", ")}`),
-      ]
-        .filter(Boolean)
-        .join("\n\n")
-    case "faq":
-      return [`## ${page.headings.faq}`, ...page.faq.map((f) => `### ${f.question}\n${f.answer}`)].join("\n\n")
-    case "cta":
-      return [`## ${page.cta.headline}`, page.cta.description, `[${page.cta.phoneButton}] [${page.cta.whatsappButton}]`].join("\n\n")
+    case "content":
+      return [`# ${page.meta.h1}`, page.content].join("\n\n")
     case "technical":
       return [
         "### Schema markup (JSON-LD)",
@@ -562,23 +523,7 @@ export function sectionMarkdown(page: LandingPage, section: LandingSection): str
   }
 }
 
-/** The whole page as Markdown, with each additional section where it sits on the page. */
+/** The whole page as Markdown: meta tags, the content under its H1, technical SEO and the image plan. */
 export function landingMarkdown(page: LandingPage) {
-  const extras = (slot: ExtraPlacement) => page.additionalSections.filter((e) => e.placement === slot).map((e) => [`## ${e.heading}`, ...e.paragraphs].join("\n\n"))
-  const parts = [
-    sectionMarkdown(page, "meta"),
-    sectionMarkdown(page, "hero"),
-    sectionMarkdown(page, "benefits"),
-    sectionMarkdown(page, "service"),
-    ...extras("service"),
-    sectionMarkdown(page, "process"),
-    ...extras("process"),
-    sectionMarkdown(page, "proof"),
-    ...extras("proof"),
-    sectionMarkdown(page, "faq"),
-    sectionMarkdown(page, "cta"),
-    sectionMarkdown(page, "technical"),
-    sectionMarkdown(page, "images"),
-  ]
-  return parts.join("\n\n---\n\n") + "\n"
+  return LANDING_SECTIONS.map((s) => sectionMarkdown(page, s.id)).join("\n\n---\n\n") + "\n"
 }

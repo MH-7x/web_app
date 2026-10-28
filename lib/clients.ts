@@ -111,6 +111,7 @@ export async function getClient(id: string) {
     phone: client.phone,
     whatsapp: client.whatsapp,
     website: client.website,
+    placeId: client.placeId,
     primaryColor: typeof brandColors.primary === "string" ? brandColors.primary : null,
     secondaryColor: typeof brandColors.secondary === "string" ? brandColors.secondary : null,
     truckType: typeof brandSpecs.truckType === "string" ? brandSpecs.truckType : "",

@@ -6,8 +6,8 @@ import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { generateLandingPage } from "@/lib/generators/landing-page"
 import { parseLandingRequest } from "@/lib/landing-page-types"
 
-// two languages, each with a possible second pass
-export const maxDuration = 300
+// a plan, a draft, section expansions and up to three revisions, each a model call
+export const maxDuration = 600
 
 /**
  * Generate landing page content for the client. Nothing is stored: the page is a draft until the user

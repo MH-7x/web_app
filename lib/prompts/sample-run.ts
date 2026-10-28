@@ -6,7 +6,7 @@ import { generateBlog, generateFAQ, generateGBP, generateMeta } from "@/lib/gene
 import { writePosts } from "@/lib/generators/gbp-posts"
 import { humanizeContent, scoreContent } from "@/lib/generators/humanizer"
 import { briefAsText, type CompetitorSummary } from "@/lib/competitor-types"
-import { generateLandingPage, planLandingPage } from "@/lib/generators/landing-page"
+import { expandSampleSection, generateLandingPage, planLandingPage, reviseSampleDraft } from "@/lib/generators/landing-page"
 import { generateSerpBrief } from "@/lib/generators/serp-brief"
 import { generateProposal } from "@/lib/generators/proposals"
 import { generateReport } from "@/lib/generators/reports"
@@ -29,6 +29,7 @@ export const SAMPLE_CLIENT: ClientDetail = {
   phone: "+971501234567",
   whatsapp: "+971501234567",
   website: "https://alnoormovers.example",
+  placeId: "",
   primaryColor: "#0f766e",
   secondaryColor: "#e2e8f0",
   truckType: "3-ton closed box truck, white with teal lettering",
@@ -56,6 +57,7 @@ const SAMPLE_BRIEF_INPUT = {
   secondaryKeywords: ["villa moving service Sharjah"],
   emirate: "Sharjah",
   service: "Villa Moving",
+  area: "",
   pageType: "service" as const,
 }
 
@@ -114,6 +116,10 @@ export async function runSample(name: TemplateName): Promise<string> {
       const result = await generateLandingPage(c, { language: "en", ...SAMPLE_BRIEF_INPUT, competitorUrls: [], serpBrief: null })
       return result.en ? landingMarkdown(result.en) : ""
     }
+    case "landing-page-section":
+      return expandSampleSection(c, { ...SAMPLE_BRIEF_INPUT, competitorUrls: [], serpBrief: null })
+    case "landing-page-revise":
+      return reviseSampleDraft(c, { ...SAMPLE_BRIEF_INPUT, competitorUrls: [], serpBrief: null })
     case "fb-ad": {
       const result = await generateFacebookAds(c, "en", { emirates: ["Sharjah"], objective: "messages", offer: "", audience: "", count: 2 })
       return result.en ? renderFacebookText(result.en) : ""

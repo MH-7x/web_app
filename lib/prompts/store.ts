@@ -20,9 +20,22 @@ export type LoadedTemplate = {
   render: (vars: Record<string, string | number | undefined | null>, lang?: "en" | "ar") => string
 }
 
+type Row = NonNullable<Awaited<ReturnType<typeof db.promptTemplate.findUnique>>>
+
+/** Bring a saved prompt up to the current built-in default when the default was revised and the saved copy was never edited. */
+async function followDefault(def: TemplateDef, row: Row): Promise<Row> {
+  const key = `prompt-rev:${def.name}`
+  const seen = Number((await db.setting.findUnique({ where: { key } }))?.value ?? 0)
+  if (seen >= def.rev!) return row
+  // saveTemplate raises the version on every edit, so version 1 means nobody has edited it
+  const updated = row.version === 1 && row.systemPrompt !== def.systemPrompt ? await db.promptTemplate.update({ where: { name: def.name }, data: { systemPrompt: def.systemPrompt, fewShotExamples: def.examples as Prisma.InputJsonValue } }) : row
+  await db.setting.upsert({ where: { key }, create: { key, value: String(def.rev) }, update: { value: String(def.rev) } })
+  return updated
+}
+
 async function rowFor(def: TemplateDef) {
   const existing = await db.promptTemplate.findUnique({ where: { name: def.name } })
-  if (existing) return existing
+  if (existing) return def.rev ? followDefault(def, existing) : existing
   try {
     return await db.promptTemplate.create({ data: { name: def.name, systemPrompt: def.systemPrompt, fewShotExamples: def.examples as Prisma.InputJsonValue } })
   } catch {

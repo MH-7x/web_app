@@ -61,10 +61,12 @@ type ModelOptions = {
   systemInstruction?: string
   json?: { schema: ResponseSchema }
   temperature?: number
+  /** per request, for long generations that need more than the default */
+  timeoutMs?: number
 }
 
 /** A model instance for the configured GEMINI_MODEL. */
-export function getGeminiModel({ systemInstruction, json, temperature }: ModelOptions = {}) {
+export function getGeminiModel({ systemInstruction, json, temperature, timeoutMs }: ModelOptions = {}) {
   return getGeminiClient().getGenerativeModel(
     {
       model: getModelName(),
@@ -74,7 +76,7 @@ export function getGeminiModel({ systemInstruction, json, temperature }: ModelOp
         ...(json ? { responseMimeType: "application/json", responseSchema: json.schema } : {}),
       },
     },
-    { timeout: REQUEST_TIMEOUT_MS }
+    { timeout: timeoutMs ?? REQUEST_TIMEOUT_MS }
   )
 }
 
@@ -131,17 +133,17 @@ export async function withRetry<T>(fn: () => Promise<T>, { retries = MAX_RETRIES
   }
 }
 
-type GenerateOptions = { systemInstruction?: string; temperature?: number }
+type GenerateOptions = { systemInstruction?: string; temperature?: number; timeoutMs?: number; retries?: number }
 
 /** One-shot text generation. */
-export async function generateText(prompt: string, { systemInstruction, temperature }: GenerateOptions = {}) {
+export async function generateText(prompt: string, { systemInstruction, temperature, timeoutMs, retries }: GenerateOptions = {}) {
   return withRetry(async () => {
-    const result = await getGeminiModel({ systemInstruction, temperature }).generateContent(prompt)
+    const result = await getGeminiModel({ systemInstruction, temperature, timeoutMs }).generateContent(prompt)
     const text = result.response.text().trim()
     // an empty body is a transient hiccup, worth another try
     if (!text) throw new GeminiError("bad_response", "Gemini returned an empty response.", 502, true)
     return text
-  })
+  }, retries === undefined ? undefined : { retries })
 }
 
 /** One-shot generation constrained to a JSON schema; returns the parsed value. */

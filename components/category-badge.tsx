@@ -8,10 +8,11 @@ const TONE: Record<ClientCategory, string> = {
   pickup_rental: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
 }
 
-export function CategoryBadge({ category, className }: { category: ClientCategory; className?: string }) {
+/** `label` replaces the category name, e.g. to show a client's name in its category colour. */
+export function CategoryBadge({ category, label, className }: { category: ClientCategory; label?: string; className?: string }) {
   return (
     <Badge variant="muted" className={cn(TONE[category], className)}>
-      {CATEGORY_INFO[category].short}
+      {label ?? CATEGORY_INFO[category].short}
     </Badge>
   )
 }

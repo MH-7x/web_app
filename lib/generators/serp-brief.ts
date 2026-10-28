@@ -71,7 +71,7 @@ function competitorData(pages: CompetitorSummary[]) {
 
 const MAX_IMAGES = 12
 
-export type BriefInput = Pick<LandingOptions, "primaryKeyword" | "secondaryKeywords" | "emirate" | "service" | "pageType">
+export type BriefInput = Pick<LandingOptions, "primaryKeyword" | "secondaryKeywords" | "emirate" | "service" | "area" | "pageType">
 
 /** Brief the writer from the pages that rank: intent, structure, gaps, length. The measured figures come from the pages, not from the model. */
 export async function generateSerpBrief(client: ClientDetail, input: BriefInput, pages: CompetitorSummary[]): Promise<SerpBrief> {
@@ -83,6 +83,7 @@ export async function generateSerpBrief(client: ClientDetail, input: BriefInput,
     category_context: categoryContext(client),
     page_type: PAGE_TYPES.find((p) => p.value === input.pageType)?.label ?? input.pageType,
     service: input.service,
+    area: input.area,
     target_emirate: input.emirate,
     primary_keyword: input.primaryKeyword,
     secondary_keywords: input.secondaryKeywords.join(", "),

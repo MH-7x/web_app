@@ -26,10 +26,12 @@ const LANGUAGE_OPTIONS: { value: Language; label: string; lang?: string }[] = [
   { value: "both", label: "Both (Dual)" },
 ]
 
-export function LanguageToggle({ value, onChange, disabled }: { value: Language; onChange: (v: Language) => void; disabled?: boolean }) {
+/** `options` limits the choices (a page written in one language offers only English and Arabic); all three show when left out. */
+export function LanguageToggle<T extends Language = Language>({ value, onChange, disabled, options }: { value: T; onChange: (v: T) => void; disabled?: boolean; options?: readonly T[] }) {
+  const shown = options ? LANGUAGE_OPTIONS.filter((o) => (options as readonly Language[]).includes(o.value)) : LANGUAGE_OPTIONS
   return (
     <div role="radiogroup" aria-label="Output language" className="inline-flex rounded-lg bg-muted p-1">
-      {LANGUAGE_OPTIONS.map((o) => (
+      {shown.map((o) => (
         <button
           key={o.value}
           type="button"
@@ -37,7 +39,7 @@ export function LanguageToggle({ value, onChange, disabled }: { value: Language;
           aria-checked={value === o.value}
           lang={o.lang}
           disabled={disabled}
-          onClick={() => onChange(o.value)}
+          onClick={() => onChange(o.value as T)}
           className={cn(
             "h-7 rounded-md px-3 text-sm font-medium transition-colors disabled:opacity-50",
             value === o.value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"

@@ -197,8 +197,8 @@ export function readingTarget(brief: SerpBrief | null | undefined) {
   return Math.min(70, Math.max(60, typeof median === "number" ? median + 5 : 0))
 }
 
-/** The brief as a compact block for a prompt. */
-export function briefAsText(brief: SerpBrief) {
+/** The brief as a compact block for a prompt. `withTargets: false` leaves out the length and the required sections, for a prompt that carries them in its own requirements. */
+export function briefAsText(brief: SerpBrief, { withTargets = true }: { withTargets?: boolean } = {}) {
   const b = brief.benchmark
   const target = wordTarget(brief)
   const lines = [
@@ -207,9 +207,9 @@ export function briefAsText(brief: SerpBrief) {
     brief.contentGaps.length && `Topics few or none of them cover (opportunities): ${brief.contentGaps.join("; ")}`,
     brief.faqThemes.length && `Question themes that recur: ${brief.faqThemes.join("; ")}`,
     brief.differentiation.length && `Angles to stand out: ${brief.differentiation.join("; ")}`,
-    target.max > 0 && `Target length: ${target.min} to ${target.max} words in total (the pages that rank have a median of ${b.wordCountMedian}; ours must match or beat it)`,
-    brief.commonSections.length && `REQUIRED sections (the page must contain every one of these, as a section of its own or as one of the fixed sections): ${brief.commonSections.join("; ")}`,
-    brief.recommendedImageCount > 0 && `Recommended image count: ${brief.recommendedImageCount}`,
+    withTargets && target.max > 0 && `Target length: ${target.min} to ${target.max} words in total (the pages that rank have a median of ${b.wordCountMedian}; ours must match or beat it)`,
+    withTargets && brief.commonSections.length && `REQUIRED sections (the page must contain every one of these, as a section of its own or as one of the fixed sections): ${brief.commonSections.join("; ")}`,
+    withTargets && brief.recommendedImageCount > 0 && `Recommended image count: ${brief.recommendedImageCount}`,
     b.pages > 0 &&
       `Measured on ${b.pages} pages: median ${b.wordCountMedian} words, ${b.h2Median} H2s, ${b.imageMedian} images, ${b.faqMedian} FAQ questions; ${b.faqPercent}% have an FAQ, ${b.processPercent}% a process section, ${b.reviewsPercent}% visible reviews, ${b.whatsappPercent}% a WhatsApp button, ${b.telPercent}% a call button; keyword in the title on ${b.keywordInTitlePercent}% and in the H1 on ${b.keywordInH1Percent}%.`,
     brief.notes && `Notes: ${brief.notes}`,

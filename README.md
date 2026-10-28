@@ -49,6 +49,29 @@ web_app
 │  │  │  │  └─ route.ts
 │  │  │  └─ [id]
 │  │  │     └─ route.ts
+│  │  ├─ citations
+│  │  │  └─ sources
+│  │  │     └─ route.ts
+│  │  ├─ clients
+│  │  │  └─ [id]
+│  │  │     ├─ activity
+│  │  │     │  └─ route.ts
+│  │  │     ├─ checklist
+│  │  │     │  └─ route.ts
+│  │  │     ├─ citations
+│  │  │     │  ├─ competitors
+│  │  │     │  │  └─ route.ts
+│  │  │     │  ├─ plan
+│  │  │     │  │  └─ route.ts
+│  │  │     │  ├─ quick-check
+│  │  │     │  │  └─ route.ts
+│  │  │     │  ├─ report
+│  │  │     │  │  └─ route.ts
+│  │  │     │  ├─ route.ts
+│  │  │     │  └─ score
+│  │  │     │     └─ route.ts
+│  │  │     └─ notes
+│  │  │        └─ route.ts
 │  │  ├─ content
 │  │  │  ├─ blog
 │  │  │  │  └─ route.ts
@@ -56,6 +79,12 @@ web_app
 │  │  │  │  └─ route.ts
 │  │  │  ├─ gbp
 │  │  │  │  └─ route.ts
+│  │  │  ├─ landing-page
+│  │  │  │  ├─ competitors
+│  │  │  │  │  └─ route.ts
+│  │  │  │  ├─ route.ts
+│  │  │  │  └─ save
+│  │  │  │     └─ route.ts
 │  │  │  ├─ meta
 │  │  │  │  └─ route.ts
 │  │  │  └─ [id]
@@ -97,6 +126,9 @@ web_app
 │  │  │     ├─ import
 │  │  │     │  └─ route.ts
 │  │  │     └─ route.ts
+│  │  ├─ places
+│  │  │  └─ search
+│  │  │     └─ route.ts
 │  │  ├─ proposals
 │  │  │  ├─ route.ts
 │  │  │  └─ [id]
@@ -107,6 +139,16 @@ web_app
 │  │  │     └─ route.ts
 │  │  ├─ reports
 │  │  │  └─ generate
+│  │  │     └─ route.ts
+│  │  ├─ reviews
+│  │  │  ├─ import
+│  │  │  │  ├─ route.ts
+│  │  │  │  └─ template
+│  │  │  │     └─ route.ts
+│  │  │  ├─ route.ts
+│  │  │  └─ [id]
+│  │  │     ├─ reply
+│  │  │     │  └─ route.ts
 │  │  │     └─ route.ts
 │  │  ├─ seo
 │  │  │  ├─ audit
@@ -135,6 +177,8 @@ web_app
 │  │           ├─ route.ts
 │  │           └─ test
 │  │              └─ route.ts
+│  ├─ citations
+│  │  └─ page.tsx
 │  ├─ clients
 │  │  ├─ export
 │  │  │  └─ route.ts
@@ -169,6 +213,8 @@ web_app
 │  │     └─ page.tsx
 │  ├─ reports
 │  │  └─ page.tsx
+│  ├─ reviews
+│  │  └─ page.tsx
 │  ├─ seo
 │  │  └─ page.tsx
 │  └─ settings
@@ -181,18 +227,38 @@ web_app
 │  │  └─ workspace.tsx
 │  ├─ breadcrumb.tsx
 │  ├─ category-badge.tsx
+│  ├─ citations
+│  │  ├─ action-plan.tsx
+│  │  ├─ competitors-panel.tsx
+│  │  ├─ my-citations.tsx
+│  │  ├─ overview.tsx
+│  │  ├─ parts.tsx
+│  │  ├─ quick-check-dialog.tsx
+│  │  ├─ report-dialog.tsx
+│  │  ├─ source-dialog.tsx
+│  │  ├─ sources-tab.tsx
+│  │  ├─ status-dialog.tsx
+│  │  └─ workspace.tsx
 │  ├─ client-avatar.tsx
 │  ├─ client-form.tsx
 │  ├─ client-selector.tsx
 │  ├─ clients
+│  │  ├─ activity-timeline.tsx
 │  │  ├─ message-builder.tsx
+│  │  ├─ onboarding-checklist.tsx
+│  │  ├─ place-field.tsx
+│  │  ├─ quick-notes.tsx
+│  │  ├─ setup-indicator.tsx
 │  │  └─ setup-progress.tsx
 │  ├─ clients-filters.tsx
 │  ├─ coming-soon.tsx
 │  ├─ content
 │  │  ├─ blog-panel.tsx
+│  │  ├─ competitor-insights.tsx
 │  │  ├─ faq-panel.tsx
 │  │  ├─ gbp-panel.tsx
+│  │  ├─ landing-page-panel.tsx
+│  │  ├─ landing-page-preview.tsx
 │  │  ├─ markdown.tsx
 │  │  ├─ meta-panel.tsx
 │  │  ├─ parts.tsx
@@ -225,6 +291,12 @@ web_app
 │  │  ├─ row-actions.tsx
 │  │  └─ status-badge.tsx
 │  ├─ reports
+│  │  └─ workspace.tsx
+│  ├─ reviews
+│  │  ├─ add-review-dialog.tsx
+│  │  ├─ bulk-upload.tsx
+│  │  ├─ parts.tsx
+│  │  ├─ reply-panel.tsx
 │  │  └─ workspace.tsx
 │  ├─ seo
 │  │  ├─ audit-log.tsx
@@ -295,8 +367,17 @@ web_app
 │  │  ├─ text.ts
 │  │  └─ types.ts
 │  ├─ business-types.ts
+│  ├─ citation-sources-seed.ts
+│  ├─ citations-types.ts
+│  ├─ citations.ts
+│  ├─ client-activity-types.ts
+│  ├─ client-activity.ts
+│  ├─ client-notes-types.ts
+│  ├─ client-notes.ts
 │  ├─ client-schema.ts
 │  ├─ clients.ts
+│  ├─ competitor-analysis.ts
+│  ├─ competitor-types.ts
 │  ├─ constants.ts
 │  ├─ content-api.ts
 │  ├─ content-types.ts
@@ -314,18 +395,28 @@ web_app
 │  ├─ gemini.ts
 │  ├─ generators
 │  │  ├─ ads.ts
+│  │  ├─ citation-report.ts
 │  │  ├─ content.ts
 │  │  ├─ gbp-posts.ts
 │  │  ├─ humanizer.ts
+│  │  ├─ landing-page.ts
 │  │  ├─ proposals.ts
-│  │  └─ reports.ts
+│  │  ├─ reports.ts
+│  │  ├─ review-reply.ts
+│  │  └─ serp-brief.ts
 │  ├─ humanizer-patterns.ts
 │  ├─ humanizer-store.ts
 │  ├─ humanizer-types.ts
 │  ├─ keyword-groups.ts
 │  ├─ keyword-import.ts
 │  ├─ keywords-types.ts
+│  ├─ landing-page-html.ts
+│  ├─ landing-page-types.ts
+│  ├─ onboarding-checklist-types.ts
+│  ├─ onboarding-checklist.ts
+│  ├─ onboarding-templates.ts
 │  ├─ onboarding.ts
+│  ├─ places-api.ts
 │  ├─ prompts
 │  │  ├─ fb-examples.ts
 │  │  ├─ gbp-examples.ts
@@ -340,11 +431,13 @@ web_app
 │  ├─ proposals-types.ts
 │  ├─ proposals.ts
 │  ├─ reports-types.ts
+│  ├─ review-import.ts
+│  ├─ reviews-types.ts
+│  ├─ reviews.ts
 │  ├─ settings.ts
 │  └─ utils.ts
 ├─ next.config.ts
 ├─ package.json
-├─ PLAN.md.md
 ├─ pnpm-lock.yaml
 ├─ pnpm-workspace.yaml
 ├─ prisma

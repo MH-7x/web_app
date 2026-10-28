@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useId, useRef, useState, useTransition } from "react"
 
 import { toast } from "sonner"
+import { PlaceField } from "@/components/clients/place-field"
 import { SetupProgress } from "@/components/clients/setup-progress"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input, Label, Select, Textarea } from "@/components/ui/input"
@@ -430,6 +431,7 @@ function CompanyStep({
         >
           {(p) => <PhoneInput {...p} value={sameAsPhone ? values.phone : values.whatsapp} disabled={sameAsPhone} onChange={(v) => set("whatsapp", v)} />}
         </Field>
+        <PlaceField value={values.placeId} error={errors.placeId} companyName={values.name} emirate={values.emirate} onChange={(v) => set("placeId", v)} />
       </div>
 
       <fieldset className="space-y-2">

@@ -21,7 +21,7 @@ const COLUMNS: Record<keyof KeywordRow, (h: string) => boolean> = {
 }
 
 /** Keyword Planner saves UTF-16 tab-separated files with a byte-order mark; decode whatever encoding the file has. */
-function decodeText(buf: Buffer) {
+export function decodeText(buf: Buffer) {
   if (buf[0] === 0xff && buf[1] === 0xfe) return buf.subarray(2).toString("utf16le")
   if (buf[0] === 0xfe && buf[1] === 0xff) return Buffer.from(buf.subarray(2)).swap16().toString("utf16le")
   if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return buf.subarray(3).toString("utf8")

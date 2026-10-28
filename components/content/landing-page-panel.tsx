@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { CompetitorInsights, type CompetitorAnalysis } from "@/components/content/competitor-insights"
-import { LandingPreview, SeoChecklist } from "@/components/content/landing-page-preview"
+import { ComparisonCard, LandingPreview, SeoChecklist } from "@/components/content/landing-page-preview"
 import { ErrorNote, GenerateButton, LanguageToggle, OutputPlaceholder, confirmDiscard, langsIn } from "@/components/content/parts"
 import type { WorkspaceClient } from "@/components/content/workspace"
 import { CopyButton } from "@/components/copy-button"
@@ -20,12 +20,16 @@ import { cn } from "@/lib/utils"
 
 type Generated = { language: Language; options: LandingOptions; result: LandingResult }
 
+const LANDING_LANGUAGES = ["en", "ar"] as const
+type LandingLanguage = (typeof LANDING_LANGUAGES)[number]
+
 export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
-  const [language, setLanguage] = useState<Language>("en")
+  const [language, setLanguage] = useState<LandingLanguage>("en")
   const [primaryKeyword, setPrimaryKeyword] = useState("")
   const [secondary, setSecondary] = useState("")
   const [emirate, setEmirate] = useState(client.emirates[0] ?? "")
   const [service, setService] = useState(client.services[0] ?? "")
+  const [area, setArea] = useState(client.areas[0] ?? "")
   const [pageType, setPageType] = useState<LandingPageType>("service")
   const [keywordError, setKeywordError] = useState<string | null>(null)
   const [competitorText, setCompetitorText] = useState("")
@@ -36,7 +40,6 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generated, setGenerated] = useState<Generated | null>(null)
-  const [view, setView] = useState<"en" | "ar">("en")
   const [savedId, setSavedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   /** Edit mode is on: the preview shows inputs */
@@ -49,16 +52,27 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
 
   const competitorUrls = parseCompetitorUrls(competitorText)
   const tooManyUrls = competitorText.split(/[\s,]+/).filter(Boolean).length > MAX_COMPETITOR_URLS
-  /** The analysis only applies to the keywords, service and pages it was run for. */
-  const signature = JSON.stringify([primaryKeyword.trim().toLowerCase(), secondary.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean), emirate, service.trim(), pageType, competitorUrls])
+  /** A service page is for one service, an area page for one area: only the one that applies is sent and shown. */
+  const isArea = pageType === "area"
+  const subject = isArea ? area.trim() : service.trim()
+  const subjectMissing = isArea ? "Choose the area this page is for." : "Choose the service this page is for."
+  const briefOptions = (primaryKeyword: string, secondaryKeywords: string[]) => ({ primaryKeyword, secondaryKeywords, emirate, service: isArea ? "" : service.trim(), area: isArea ? area.trim() : "", pageType })
+  /** The analysis only applies to the keywords, service or area, and pages it was run for. */
+  const signature = JSON.stringify([primaryKeyword.trim().toLowerCase(), secondary.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean), emirate, subject, pageType, competitorUrls])
   const analysisCurrent = analysis !== null && analysis.signature === signature
   const brief: SerpBrief | null = analysisCurrent ? analysis.brief : null
 
-  async function analyze(refresh: boolean) {
+  /** Read the pasted competitor pages and brief the writer. Returns the brief, or null when it could not be made (the reason is shown). */
+  async function analyze(refresh: boolean): Promise<SerpBrief | null> {
     const primary = primaryKeyword.trim()
-    if (!primary) return setKeywordError("Enter the primary keyword before analyzing competitors.")
-    if (!service.trim()) return setKeywordError("Choose the service this page is for.")
-    if (!competitorUrls.length) return setAnalysisError("Paste at least one competitor page address.")
+    if (!primary || !subject) {
+      setKeywordError(primary ? subjectMissing : "Enter the primary keyword before analyzing competitors.")
+      return null
+    }
+    if (!competitorUrls.length) {
+      setAnalysisError("Paste at least one competitor page address.")
+      return null
+    }
     setKeywordError(null)
     setAnalysisError(null)
     setAnalyzing(true)
@@ -66,22 +80,22 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
       const res = await fetch("/api/content/landing-page/competitors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId: client.id,
-          urls: competitorUrls,
-          refresh,
-          options: { primaryKeyword: primary, secondaryKeywords: secondary.split(",").map((k) => k.trim()).filter(Boolean), emirate, service: service.trim(), pageType },
-        }),
+        body: JSON.stringify({ clientId: client.id, urls: competitorUrls, refresh, options: briefOptions(primary, secondary.split(",").map((k) => k.trim()).filter(Boolean)) }),
       })
       const body = (await res.json().catch(() => null)) as { pages?: CompetitorAnalysis["pages"]; errors?: CompetitorAnalysis["errors"]; brief?: SerpBrief | null; error?: string } | null
       if (!res.ok || !body || body.error) throw new Error(body?.error ?? `Request failed (${res.status}).`)
       setAnalysis({ signature, pages: body.pages ?? [], errors: body.errors ?? [], brief: body.brief ?? null })
       if (body.brief) toast.success("Competitors analyzed", { description: `${body.pages?.length ?? 0} pages read. The brief will shape the next page.` })
-      else toast.error("No competitor page could be read", { description: "See the reasons below." })
+      else {
+        setAnalysisError("No competitor page could be read. See the reasons below.")
+        toast.error("No competitor page could be read", { description: "See the reasons below." })
+      }
+      return body.brief ?? null
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again."
       setAnalysisError(message)
       toast.error("Couldn't analyze competitors", { description: message })
+      return null
     } finally {
       setAnalyzing(false)
     }
@@ -92,7 +106,7 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
     if (!primary) return setKeywordError("Enter the primary keyword.")
     const secondaryKeywords = secondary.split(",").map((k) => k.trim()).filter(Boolean)
     if (secondaryKeywords.length > MAX_SECONDARY_KEYWORDS) return setKeywordError(`Use up to ${MAX_SECONDARY_KEYWORDS} secondary keywords.`)
-    if (!service.trim()) return setKeywordError("Choose the service this page is for.")
+    if (!subject) return setKeywordError(subjectMissing)
     setKeywordError(null)
     if (!confirmDiscard(dirty)) return
 
@@ -102,16 +116,25 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
     setLoading(true)
     setError(null)
     try {
+      // pasted competitor pages are never skipped quietly: an analysis that is missing or out of date (a keyword, the service
+      // or the page type changed since) is redone first, and if that fails nothing is generated without it
+      let activeBrief = brief
+      if (competitorUrls.length && !activeBrief) {
+        activeBrief = await analyze(false)
+        if (!activeBrief) {
+          setError("The competitor pages could not be analyzed, so the page was not generated without them. Try again, or clear the competitor addresses to write the page without them.")
+          return
+        }
+      }
       const res = await fetch("/api/content/landing-page", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId: client.id, language, options: { primaryKeyword: primary, secondaryKeywords, emirate, service: service.trim(), pageType, competitorUrls: brief ? competitorUrls : [], serpBrief: brief } }),
+        body: JSON.stringify({ clientId: client.id, language, options: { ...briefOptions(primary, secondaryKeywords), competitorUrls: activeBrief ? competitorUrls : [], serpBrief: activeBrief } }),
         signal: controller.signal,
       })
       const body = (await res.json().catch(() => null)) as (Generated & { error?: undefined }) | { error: string } | null
       if (!res.ok || !body || "error" in body) throw new Error(body && "error" in body && body.error ? body.error : `Request failed (${res.status}).`)
       setGenerated(body)
-      setView(langsIn(body.result).includes("en") ? "en" : "ar")
       setSavedId(null)
       setDirty(false)
       setEditing(false)
@@ -159,14 +182,14 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
     const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }))
     const a = document.createElement("a")
     a.href = url
-    a.download = `${page.meta.slug || "landing-page"}${generated.language === "both" ? `-${lang}` : ""}.html`
+    a.download = `${page.meta.slug || "landing-page"}.html`
     a.click()
     URL.revokeObjectURL(url)
   }
 
-  const langs = generated ? langsIn(generated.result) : []
-  const page = generated?.result[view] ?? (generated ? generated.result[langs[0]] : undefined)
-  const shownLang = generated?.result[view] ? view : langs[0]
+  // a page is written in one language, so there is only ever one version to show
+  const shownLang = generated ? langsIn(generated.result)[0] : undefined
+  const page = generated && shownLang ? generated.result[shownLang] : undefined
   const placeholders = page ? countPlaceholders(page) : 0
 
   return (
@@ -246,6 +269,7 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
             <span className="text-xs text-muted-foreground">
               {tooManyUrls ? `Only the first ${MAX_COMPETITOR_URLS} addresses are used. ` : ""}
               Optional. Only the pages you paste are read, and saved for 30 days. The new page learns their structure and gaps; their wording is never reused.
+              {competitorUrls.length > 0 && !brief && !analyzing ? " Generate will analyze these pages first." : ""}
             </span>
           </div>
           {analysisError && (
@@ -265,20 +289,6 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
                 </option>
               ))}
             </Select>
-          </div>
-          <div className="min-w-52 flex-1 space-y-1.5">
-            <Label htmlFor="lp-service">Service</Label>
-            {client.services.length ? (
-              <Select id="lp-service" value={service} onChange={(e) => setService(e.target.value)}>
-                {client.services.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
-            ) : (
-              <Input id="lp-service" value={service} onChange={(e) => setService(e.target.value)} placeholder="e.g. Villa moving" />
-            )}
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-medium">Page type</p>
@@ -301,9 +311,40 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
               ))}
             </div>
           </div>
+          {isArea ? (
+            <div className="min-w-52 flex-1 space-y-1.5">
+              <Label htmlFor="lp-area">Area</Label>
+              {client.areas.length ? (
+                <Select id="lp-area" value={area} onChange={(e) => setArea(e.target.value)}>
+                  {client.areas.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input id="lp-area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Dubai Marina" />
+              )}
+            </div>
+          ) : (
+            <div className="min-w-52 flex-1 space-y-1.5">
+              <Label htmlFor="lp-service">Service</Label>
+              {client.services.length ? (
+                <Select id="lp-service" value={service} onChange={(e) => setService(e.target.value)}>
+                  {client.services.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input id="lp-service" value={service} onChange={(e) => setService(e.target.value)} placeholder="e.g. Villa moving" />
+              )}
+            </div>
+          )}
           <div className="space-y-1.5">
             <p className="text-sm font-medium">Language</p>
-            <LanguageToggle value={language} onChange={setLanguage} disabled={loading} />
+            <LanguageToggle value={language} onChange={setLanguage} disabled={loading} options={LANDING_LANGUAGES} />
           </div>
           <GenerateButton loading={loading} onClick={() => void run()}>
             Generate
@@ -323,23 +364,6 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
       {generated && page && shownLang ? (
         <div className={cn("space-y-4", loading && "opacity-60")}>
           <div className="flex flex-wrap items-center gap-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
-            {langs.length > 1 && (
-              <div role="tablist" aria-label="Page language" className="mr-2 inline-flex rounded-lg bg-muted p-1">
-                {(["en", "ar"] as const).map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    role="tab"
-                    aria-selected={shownLang === l}
-                    lang={l === "ar" ? "ar" : undefined}
-                    onClick={() => setView(l)}
-                    className={cn("h-7 rounded-md px-3 text-sm font-medium", shownLang === l ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")}
-                  >
-                    {l === "ar" ? "العربية" : "English"}
-                  </button>
-                ))}
-              </div>
-            )}
             <Button type="button" variant={editing ? "default" : "outline"} size="sm" aria-pressed={editing} onClick={() => setEditing((e) => !e)}>
               {editing ? <Check /> : <Pencil />}
               {editing ? "Done editing" : "Edit"}
@@ -361,6 +385,7 @@ export function LandingPagePanel({ client }: { client: WorkspaceClient }) {
           </div>
 
           <SeoChecklist page={page} options={generated.options} lang={shownLang} />
+          <ComparisonCard page={page} options={generated.options} lang={shownLang} />
           <LandingPreview page={page} lang={shownLang} editing={editing} onChange={(next) => editPage(shownLang, next)} />
         </div>
       ) : (

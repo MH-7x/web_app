@@ -40,6 +40,7 @@ async function EditForm({ params }: { params: PageProps<"/clients/[id]/edit">["p
     emirate: client.emirate,
     emiratesServed: client.emiratesServed,
     website: client.website ? displayDomain(client.website) : "",
+    placeId: client.placeId,
     phone: national(client.phone),
     whatsapp: national(client.whatsapp),
     areas: client.areas,

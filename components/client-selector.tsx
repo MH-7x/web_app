@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, ChevronDown, Plus, Search, X } from "lucide-react"
+import { Check, ChevronDown, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import { useOptimistic, useState, useTransition } from "react"
 
@@ -44,7 +44,7 @@ export function ClientSelector({ clients, activeId }: { clients: Option[]; activ
       >
         <span className={cn("size-1.5 shrink-0 rounded-full", active ? "bg-chart-3" : "bg-muted-foreground/40")} />
         <span className={cn("flex-1 truncate text-left", !active && "text-muted-foreground")}>
-          {active ? active.name : "Select a client"}
+          {active ? active.name : "All Clients"}
         </span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
@@ -63,6 +63,21 @@ export function ClientSelector({ clients, activeId }: { clients: Option[]; activ
         </div>
 
         <ul role="listbox" aria-label="Clients" className="max-h-64 overflow-y-auto">
+          {!term && (
+            <li role="option" aria-selected={optimisticId === null}>
+              <button
+                type="button"
+                onClick={() => select(null)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">All Clients</span>
+                  <span className="block text-xs text-muted-foreground">Combined view where a page supports it</span>
+                </span>
+                {optimisticId === null && <Check className="size-4 text-primary" />}
+              </button>
+            </li>
+          )}
           {filtered.map((c) => (
             <li key={c.id} role="option" aria-selected={c.id === optimisticId}>
               <button
@@ -93,15 +108,6 @@ export function ClientSelector({ clients, activeId }: { clients: Option[]; activ
           >
             <Plus className="size-3.5" /> Add client
           </Link>
-          {active && (
-            <button
-              type="button"
-              onClick={() => select(null)}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted"
-            >
-              <X className="size-3.5" /> Clear
-            </button>
-          )}
         </div>
       </PopoverContent>
     </Popover>

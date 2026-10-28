@@ -1,4 +1,7 @@
 import { db } from "@/lib/db"
+import { checklistProgress } from "@/lib/onboarding-checklist-types"
+import { parseChecklist } from "@/lib/onboarding-checklist"
+import { NEGATIVE_MAX_RATING } from "@/lib/reviews-types"
 
 const DAY = 24 * 60 * 60 * 1000
 const TZ = "Asia/Dubai"
@@ -35,7 +38,7 @@ export async function getDashboardData(now: Date) {
   const weekStart = new Date(todayStart.getTime() - 6 * DAY)
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY)
 
-  const [clients, thisMonth, lastMonth, total, idle, weekRows, topGroup, recentClients] = await Promise.all([
+  const [clients, thisMonth, lastMonth, total, idle, weekRows, topGroup, recentClients, reviewsNeedingReply, napIssues, checklists] = await Promise.all([
     db.client.count(),
     db.generatedContent.count({ where: { createdAt: { gte: monthStart } } }),
     db.generatedContent.count({ where: { createdAt: { gte: prevMonthStart, lt: monthStart } } }),
@@ -50,7 +53,14 @@ export async function getDashboardData(now: Date) {
       take: 1,
     }),
     db.client.findMany({ orderBy: { createdAt: "desc" }, take: 4, select: { id: true, name: true, emirate: true, createdAt: true } }),
+    db.review.count({ where: { rating: { lte: NEGATIVE_MAX_RATING }, replyStatus: "none" } }),
+    db.clientCitation.count({ where: { status: "issues_found" } }),
+    db.client.findMany({ select: { onboardingChecklist: true } }),
   ])
+
+  // a client whose checklist hasn't been created yet has nothing ticked, so it counts as 0%
+  const percents = checklists.map((c) => checklistProgress(parseChecklist(c.onboardingChecklist)).percent)
+  const onboardingAverage = percents.length ? Math.round(percents.reduce((sum, p) => sum + p, 0) / percents.length) : 0
 
   const topClient = topGroup[0]
     ? {
@@ -66,5 +76,5 @@ export async function getDashboardData(now: Date) {
     return { label, count }
   })
 
-  return { clients, thisMonth, lastMonth, total, idle, week, topClient, recentClients }
+  return { clients, thisMonth, lastMonth, total, idle, week, topClient, recentClients, reviewsNeedingReply, napIssues, onboardingAverage }
 }

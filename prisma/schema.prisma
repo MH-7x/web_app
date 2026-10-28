@@ -32,11 +32,15 @@ model Client {
   clientNotes    String             @default("[]") // JSON [{id, text, pinned, createdAt}]: quick notes shown on the client page
   companyProfile String             @default("") // the company's full profile (services, selling points, fleet...), fed to the generators
   onboardingChecklist String        @default("[]") // JSON [{id, label, section, checked, checkedAt, isCustom}]: setup tasks; empty until first seeded
+  placeId        String             @default("") // Google Places ID: used to fetch the business's Google reviews
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   content        GeneratedContent[]
   posts          GBPPost[]
   audits         Audit[]
+  reviews        Review[]
+  citations           ClientCitation[]
+  citationCompetitors CitationCompetitor[]
 }
 
 model GeneratedContent {
@@ -101,6 +105,26 @@ model Audit {
   createdAt       DateTime @default(now())
 
   @@index([clientId, createdAt])
+}
+
+/// A Google review of a client's business, fetched with the Places API and cached so the inbox loads without an API call.
+model Review {
+  id          String    @id @default(cuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reviewId    String    @unique // the Places review resource name; unique so a re-fetch never duplicates
+  authorName  String
+  rating      Int
+  text        String
+  language    String    @default("en") // en, ar
+  publishedAt DateTime
+  replyStatus String    @default("none") // none, drafted, replied
+  replyDraft  String    @default("")
+  repliedAt   DateTime?
+  fetchedAt   DateTime  @default(now())
+
+  @@index([clientId, publishedAt])
+  @@index([replyStatus, rating])
 }
 
 model GBPConnection {
@@ -177,4 +201,61 @@ model CompetitorPage {
   url       String   @unique // normalized: no hash, no trailing slash
   data      String   @default("{}") // JSON: the page's structure and capped text, see lib/competitor-types.ts
   fetchedAt DateTime @default(now())
+}
+
+/// A directory or listing site where businesses should be listed (Yellow Pages UAE, Bing Places...). One shared list for every client.
+model CitationSource {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  url             String
+  submitUrl       String           @default("") // where a new listing is submitted, when known
+  sourceType      String           @default("nap_citation") // nap_citation: a directory listing checked for name/address/phone/website; backlink: a profile or post that only needs a live link
+  category        String           @default("general") // general, industry, uae-local, international, social, maps; backlinks: web2, profile, forum, classified
+  domainAuthority Int              @default(0)
+  relevantFor     String           @default("[\"all\"]") // JSON ["all"] or ["moving", "used_furniture", "pickup_rental"]
+  napFields       String           @default("[]") // JSON of what the directory supports: name, address, phone, website, email, hours, description, photos
+  isFree          Boolean          @default(true)
+  priority        String           @default("medium") // high, medium, low
+  tier            Int              @default(4) // 1 must have, 2 high-impact UAE, 3 industry specific, 4 general / international
+  notes           String           @default("")
+  createdAt       DateTime         @default(now())
+  citations       ClientCitation[]
+}
+
+/// Where one client is listed on one directory, and whether the name, address, phone and website there are correct.
+model ClientCitation {
+  id               String         @id @default(cuid())
+  clientId         String
+  client           Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  citationSourceId String
+  source           CitationSource @relation(fields: [citationSourceId], references: [id], onDelete: Cascade)
+  status           String         @default("unchecked") // unchecked, listed, not_listed, issues_found
+  nameMatch        Boolean        @default(false)
+  addressMatch     Boolean        @default(false)
+  phoneMatch       Boolean        @default(false)
+  websiteMatch     Boolean        @default(false)
+  listingUrl       String         @default("")
+  linkUrl          String         @default("") // backlink sources only: the page that links to the client's site
+  linkStatus       String         @default("") // backlink sources only: "" (not created), pending, live, dead
+  linkCreatedAt    DateTime? // backlink sources only: when a link URL was first recorded
+  issues           String         @default("[]") // JSON array of strings describing what is wrong
+  actionDoneAt     DateTime? // ticked off in the action plan (fixed, or submitted and waiting to appear)
+  lastChecked      DateTime?
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([clientId, citationSourceId])
+  @@index([clientId])
+}
+
+/// A competitor and the directories it is listed on, to show which listings the client is missing. Only yes/no per directory, no NAP checks.
+model CitationCompetitor {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  sourceIds String   @default("[]") // JSON of CitationSource ids the competitor is listed on
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
 }

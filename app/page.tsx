@@ -4,7 +4,10 @@ import {
   Building2,
   CalendarDays,
   FileText,
+  Link2,
+  ListChecks,
   Megaphone,
+  MessageCircle,
   Search,
   Sparkles,
   TrendingDown,
@@ -85,6 +88,35 @@ async function Dashboard() {
           unit={data.idle === 1 ? "client" : "clients"}
           badge={data.idle > 0 ? "Needs content" : "All active"}
           warn={data.idle > 0}
+        />
+      </section>
+
+      <section aria-label="Needs attention" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Stat
+          label="Reviews Needing Reply"
+          icon={<MessageCircle />}
+          value={data.reviewsNeedingReply}
+          unit={data.reviewsNeedingReply === 1 ? "review" : "reviews"}
+          badge={data.reviewsNeedingReply > 0 ? "Negative, no reply" : "All answered"}
+          warn={data.reviewsNeedingReply > 0}
+          href="/reviews?rating=negative&status=none"
+        />
+        <Stat
+          label="NAP Issues"
+          icon={<Link2 />}
+          value={data.napIssues}
+          unit={data.napIssues === 1 ? "listing" : "listings"}
+          badge={data.napIssues > 0 ? "Details don't match" : "All consistent"}
+          warn={data.napIssues > 0}
+          href="/citations"
+        />
+        <Stat
+          label="Onboarding Progress"
+          icon={<ListChecks />}
+          value={data.onboardingAverage}
+          unit="% average"
+          badge={`${data.clients} ${data.clients === 1 ? "client" : "clients"}`}
+          href="/clients"
         />
       </section>
 
@@ -260,6 +292,7 @@ function Stat({
   badge,
   trend,
   warn,
+  href,
 }: {
   label: string
   icon: React.ReactNode
@@ -268,9 +301,10 @@ function Stat({
   badge?: string
   trend?: { delta: number; label: string }
   warn?: boolean
+  href?: string
 }) {
-  return (
-    <Card className="p-5">
+  const card = (
+    <Card className={cn("p-5 transition-shadow", href && "group-hover/stat:ring-primary/40")}>
       <div className="flex items-center justify-between text-sm text-muted-foreground [&_svg]:size-4">
         {label}
         {icon}
@@ -289,6 +323,12 @@ function Stat({
         )}
       </div>
     </Card>
+  )
+  if (!href) return card
+  return (
+    <Link href={href} className="group/stat rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      {card}
+    </Link>
   )
 }
 

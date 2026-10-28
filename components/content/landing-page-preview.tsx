@@ -8,11 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input, Select, Textarea } from "@/components/ui/input"
+import { CALL_LINK, WHATSAPP_LINK, contentWords, parseBlocks, parseInline } from "@/lib/landing-content"
+import { compareWithCompetitors } from "@/lib/landing-requirements"
 import {
   LANDING_SECTIONS,
   MAX_ALT_LENGTH,
   PLACEHOLDER,
   checkLandingPage,
+  landingWordCount,
   sectionMarkdown,
   type LandingOptions,
   type LandingPage,
@@ -38,13 +41,16 @@ function Marked({ text }: { text: string }) {
   )
 }
 
-function Block({ section, page, children }: { section: LandingSection; page: LandingPage; children: ReactNode }) {
+function Block({ section, page, children, hint }: { section: LandingSection; page: LandingPage; children: ReactNode; hint?: ReactNode }) {
   const label = LANDING_SECTIONS.find((s) => s.id === section)!.label
   return (
     <Card className="min-w-0">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <h3 className="text-sm font-semibold">{label}</h3>
-        <CopyButton text={sectionMarkdown(page, section)} label="Copy section" />
+        <div className="flex items-center gap-3">
+          {hint}
+          <CopyButton text={sectionMarkdown(page, section)} label="Copy section" />
+        </div>
       </div>
       <div className="space-y-3 p-4 text-sm">{children}</div>
     </Card>
@@ -121,9 +127,119 @@ export function SeoChecklist({ page, options, lang }: { page: LandingPage; optio
   )
 }
 
+/** The page set against the figures measured on the ranking pages. Nothing is shown until competitors have been analyzed. */
+export function ComparisonCard({ page, options, lang }: { page: LandingPage; options: LandingOptions; lang: "en" | "ar" }) {
+  const rows = compareWithCompetitors(page, options, lang)
+  if (!rows) return null
+  const short = rows.filter((r) => r.status === "short").length
+  return (
+    <Card className="min-w-0">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
+        <h3 className="text-sm font-semibold">Compared with the pages that rank</h3>
+        <Badge variant={short ? "outline" : "success"}>{short ? `${short} below them` : "Matches or beats them"}</Badge>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-start text-xs text-muted-foreground">
+            <tr className="border-b border-border">
+              <th scope="col" className="px-4 py-2 text-start font-medium">What</th>
+              <th scope="col" className="px-3 py-2 text-start font-medium">This page</th>
+              <th scope="col" className="px-3 py-2 text-start font-medium">Ranking pages</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.label} className="border-b border-border last:border-0">
+                <td className="px-4 py-2">{r.label}</td>
+                <td className={cn("px-3 py-2 font-medium tabular-nums", r.status === "short" && "text-destructive")}>{r.ours}</td>
+                <td className="px-3 py-2 text-muted-foreground">{r.theirs}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  )
+}
+
+/* ------------------------------------------------------------------- content */
+
+/** Bold, italic and links in a line. The call and WhatsApp links show as buttons, as they will on the page. */
+function Inline({ text }: { text: string }) {
+  return (
+    <>
+      {parseInline(text).map((t, i) => {
+        if (t.kind === "bold") return <strong key={i}><Marked text={t.text} /></strong>
+        if (t.kind === "italic") return <em key={i}><Marked text={t.text} /></em>
+        if (t.kind === "link") {
+          if (t.href === CALL_LINK) return <span key={i} className="mx-0.5 inline-block rounded-md bg-primary px-2.5 py-0.5 text-[13px] font-semibold text-primary-foreground">{t.text}</span>
+          if (t.href === WHATSAPP_LINK) return <span key={i} className="mx-0.5 inline-block rounded-md px-2.5 py-0.5 text-[13px] font-semibold text-primary ring-1 ring-primary">{t.text}</span>
+          return /^https?:\/\//i.test(t.href ?? "") ? (
+            <a key={i} href={t.href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              {t.text}
+            </a>
+          ) : (
+            <span key={i}>{t.text}</span>
+          )
+        }
+        return <Marked key={i} text={t.text} />
+      })}
+    </>
+  )
+}
+
+/** The page body as it will read: headings, paragraphs, the process, quotes. */
+function Body({ md }: { md: string }) {
+  return (
+    <div className="space-y-3 leading-relaxed">
+      {parseBlocks(md).map((b, i) => {
+        if (b.type === "heading") {
+          return b.level === 2 ? (
+            <h2 key={i} className="pt-3 text-lg font-semibold">
+              <Inline text={b.text} />
+            </h2>
+          ) : (
+            <h3 key={i} className="pt-1 font-semibold">
+              <Inline text={b.text} />
+            </h3>
+          )
+        }
+        if (b.type === "list") {
+          const Tag = b.ordered ? "ol" : "ul"
+          return (
+            <Tag key={i} className={cn("space-y-1.5 ps-6", b.ordered ? "list-decimal" : "list-disc")}>
+              {b.items.map((item, n) => (
+                <li key={n}>
+                  <Inline text={item} />
+                </li>
+              ))}
+            </Tag>
+          )
+        }
+        if (b.type === "quote") {
+          return (
+            <blockquote key={i} className="space-y-0.5 border-s-2 border-primary/40 ps-3 text-muted-foreground">
+              {b.lines.map((l, n) => (
+                <p key={n}>
+                  <Inline text={l} />
+                </p>
+              ))}
+            </blockquote>
+          )
+        }
+        return (
+          <p key={i}>
+            <Inline text={b.text} />
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
- * The generated page, one visually separate block per section. With `editing` every field becomes an input and
- * each change goes to `onChange` as a whole new page, so the checklist, copy buttons and exports follow the edits.
+ * The generated page: the meta tags, the page content as one document, the technical SEO and the image plan. With `editing` every
+ * field becomes an input and each change goes to `onChange` as a whole new page, so the checklist, copy buttons and exports follow the edits.
  */
 export function LandingPreview({ page, lang, editing = false, onChange }: { page: LandingPage; lang: "en" | "ar"; editing?: boolean; onChange?: (next: LandingPage) => void }) {
   const update = (patch: Partial<LandingPage>) => onChange?.({ ...page, ...patch })
@@ -159,180 +275,29 @@ export function LandingPreview({ page, lang, editing = false, onChange }: { page
         </div>
       </Block>
 
-      <Block section="hero" page={page}>
+      <Block section="content" page={page} hint={<span className="text-xs text-muted-foreground tabular-nums">{landingWordCount(page)} words</span>}>
         {editing ? (
-          <div className="space-y-3">
-            <Field label="Headline">{T(page.hero.headline, (v) => update({ hero: { ...page.hero, headline: v } }), "Headline", true)}</Field>
-            <Field label="Subheadline">{T(page.hero.subheadline, (v) => update({ hero: { ...page.hero, subheadline: v } }), "Subheadline", true)}</Field>
-            <Field label="Button text">{T(page.hero.cta, (v) => update({ hero: { ...page.hero, cta: v } }), "Hero button text")}</Field>
-            <Field label="Trust badges">
-              <div className="space-y-1.5">
-                {page.hero.trustBadges.map((b, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    {T(b, (v) => update({ hero: { ...page.hero, trustBadges: replaceAt(page.hero.trustBadges, i, v) } }), `Trust badge ${i + 1}`)}
-                    <RemoveButton label={`Remove trust badge ${i + 1}`} onClick={() => update({ hero: { ...page.hero, trustBadges: removeAt(page.hero.trustBadges, i) } })} />
-                  </div>
-                ))}
-                <AddButton onClick={() => update({ hero: { ...page.hero, trustBadges: [...page.hero.trustBadges, ""] } })}>Add badge</AddButton>
-              </div>
-            </Field>
-          </div>
+          <Field
+            label="Page content (markdown)"
+            hint={<span className="font-normal tracking-normal normal-case">## for sections, ### for sub-headings, a numbered list for the process, [Call Now](#call) and [WhatsApp Us](#whatsapp) for buttons</span>}
+          >
+            <Textarea
+              aria-label="Page content"
+              value={page.content}
+              onChange={(e) => update({ content: e.target.value })}
+              dir={lang === "ar" ? "rtl" : "ltr"}
+              className="field-sizing-content min-h-96 font-mono text-[13px] leading-relaxed"
+            />
+            <p className="mt-1 text-xs text-muted-foreground tabular-nums">{contentWords(page.content)} words in the body</p>
+          </Field>
         ) : (
-          <div className="space-y-2 rounded-lg bg-muted/40 p-5 text-center">
-            <p className="text-xl font-bold">
+          <div className="space-y-3">
+            <h1 className="text-xl font-bold">
               <Marked text={page.meta.h1} />
-            </p>
-            <p className="font-semibold text-primary">
-              <Marked text={page.hero.headline} />
-            </p>
-            <p className="text-muted-foreground">
-              <Marked text={page.hero.subheadline} />
-            </p>
-            <p className="pt-1">
-              <span className="inline-block rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground">
-                <Marked text={page.hero.cta} />
-              </span>
-            </p>
-            <ul className="flex flex-wrap justify-center gap-1.5 pt-1">
-              {page.hero.trustBadges.map((b, i) => (
-                <li key={i}>
-                  <Badge variant="muted">
-                    <Marked text={b} />
-                  </Badge>
-                </li>
-              ))}
-            </ul>
+            </h1>
+            <Body md={page.content} />
           </div>
         )}
-      </Block>
-
-      <Block section="benefits" page={page}>
-        <p className="text-base font-semibold">{T(page.headings.benefits, (v) => update({ headings: { ...page.headings, benefits: v } }), "Benefits heading")}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {page.benefits.map((b, i) => {
-            const set = (patch: Partial<typeof b>) => update({ benefits: replaceAt(page.benefits, i, { ...b, ...patch }) })
-            return (
-              <div key={i} className="space-y-1 rounded-lg bg-muted/40 p-3">
-                {editing ? (
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1">
-                      {T(b.heading, (v) => set({ heading: v }), `Benefit ${i + 1} heading`)}
-                      <RemoveButton label={`Remove benefit ${i + 1}`} onClick={() => update({ benefits: removeAt(page.benefits, i) })} />
-                    </div>
-                    <Input aria-label={`Benefit ${i + 1} icon`} dir="ltr" value={b.icon} onChange={(e) => set({ icon: e.target.value })} placeholder="Icon name, e.g. truck" className="font-mono" />
-                    {T(b.description, (v) => set({ description: v }), `Benefit ${i + 1} description`, true)}
-                  </div>
-                ) : (
-                  <>
-                    <p className="flex items-center justify-between gap-2 font-semibold">
-                      <Marked text={b.heading} />
-                      {b.icon && (
-                        <Badge variant="outline" dir="ltr" className="font-mono">
-                          {b.icon}
-                        </Badge>
-                      )}
-                    </p>
-                    <p className="text-muted-foreground">
-                      <Marked text={b.description} />
-                    </p>
-                  </>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        {editing && <AddButton onClick={() => update({ benefits: [...page.benefits, { icon: "", heading: "", description: "" }] })}>Add benefit</AddButton>}
-      </Block>
-
-      <Block section="service" page={page}>
-        <p className="text-base font-semibold">{T(page.headings.service, (v) => update({ headings: { ...page.headings, service: v } }), "Service heading")}</p>
-        {page.serviceDetails.map((p, i) => (
-          <div key={i} className="flex items-start gap-1">
-            <p className="flex-1 leading-relaxed">{T(p, (v) => update({ serviceDetails: replaceAt(page.serviceDetails, i, v) }), `Service paragraph ${i + 1}`, true)}</p>
-            {editing && <RemoveButton label={`Remove paragraph ${i + 1}`} onClick={() => update({ serviceDetails: removeAt(page.serviceDetails, i) })} />}
-          </div>
-        ))}
-        {editing && <AddButton onClick={() => update({ serviceDetails: [...page.serviceDetails, ""] })}>Add paragraph</AddButton>}
-      </Block>
-
-      <Block section="process" page={page}>
-        <p className="text-base font-semibold">{T(page.headings.process, (v) => update({ headings: { ...page.headings, process: v } }), "Process heading")}</p>
-        <ol className="space-y-3">
-          {page.process.map((s, i) => {
-            const set = (patch: Partial<typeof s>) => update({ process: replaceAt(page.process, i, { ...s, ...patch }) })
-            return (
-              <li key={i} className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
-                {editing ? (
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="flex items-center gap-1">
-                      {T(s.title, (v) => set({ title: v }), `Step ${i + 1} title`)}
-                      <RemoveButton label={`Remove step ${i + 1}`} onClick={() => update({ process: removeAt(page.process, i) })} />
-                    </div>
-                    {T(s.description, (v) => set({ description: v }), `Step ${i + 1} description`, true)}
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <input type="checkbox" checked={s.confirm} onChange={(e) => set({ confirm: e.target.checked })} className="size-3.5 accent-primary" />
-                      Needs confirming with the client
-                    </label>
-                  </div>
-                ) : (
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 font-semibold">
-                      <Marked text={s.title} />
-                      {s.confirm && <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300">Confirm with client</Badge>}
-                    </p>
-                    <p className="text-muted-foreground">
-                      <Marked text={s.description} />
-                    </p>
-                  </div>
-                )}
-              </li>
-            )
-          })}
-        </ol>
-        {editing && <AddButton onClick={() => update({ process: [...page.process, { title: "", description: "", confirm: false }] })}>Add step</AddButton>}
-      </Block>
-
-      <Block section="extra" page={page}>
-        {page.additionalSections.length === 0 && !editing && <p className="text-muted-foreground">No additional sections: the fixed sections already cover everything the ranking pages share.</p>}
-        {page.additionalSections.map((e, i) => {
-          const set = (patch: Partial<typeof e>) => update({ additionalSections: replaceAt(page.additionalSections, i, { ...e, ...patch }) })
-          return editing ? (
-            <div key={i} className="space-y-1.5 rounded-lg border border-border p-3">
-              <div className="flex items-center gap-1">
-                {T(e.heading, (v) => set({ heading: v }), `Section ${i + 1} heading`)}
-                <Select aria-label={`Section ${i + 1} position`} value={e.placement} onChange={(ev) => set({ placement: ev.target.value === "service" || ev.target.value === "proof" ? ev.target.value : "process" })} className="w-48 shrink-0">
-                  <option value="service">After service details</option>
-                  <option value="process">After process</option>
-                  <option value="proof">After social proof</option>
-                </Select>
-                <RemoveButton label={`Remove section ${i + 1}`} onClick={() => update({ additionalSections: removeAt(page.additionalSections, i) })} />
-              </div>
-              {e.paragraphs.map((p, j) => (
-                <div key={j} className="flex items-start gap-1">
-                  {T(p, (v) => set({ paragraphs: replaceAt(e.paragraphs, j, v) }), `Section ${i + 1} paragraph ${j + 1}`, true)}
-                  <RemoveButton label={`Remove paragraph ${j + 1} of section ${i + 1}`} onClick={() => set({ paragraphs: removeAt(e.paragraphs, j) })} />
-                </div>
-              ))}
-              <AddButton onClick={() => set({ paragraphs: [...e.paragraphs, ""] })}>Add paragraph</AddButton>
-            </div>
-          ) : (
-            <div key={i} className="space-y-2 rounded-lg bg-muted/40 p-3">
-              <p className="flex items-center justify-between gap-2 text-base font-semibold">
-                <Marked text={e.heading} />
-                <Badge variant="outline" className="font-normal">
-                  {e.placement === "service" ? "after service details" : e.placement === "proof" ? "after social proof" : "after process"}
-                </Badge>
-              </p>
-              {e.paragraphs.map((p, j) => (
-                <p key={j} className="leading-relaxed">
-                  <Marked text={p} />
-                </p>
-              ))}
-            </div>
-          )
-        })}
-        {editing && <AddButton onClick={() => update({ additionalSections: [...page.additionalSections, { heading: "", paragraphs: [""], placement: "process" }] })}>Add section</AddButton>}
         {page.sectionCoverage.length > 0 && (
           <Field label="Sections the ranking pages share, and where this page covers them">
             <ul className="space-y-0.5">
@@ -345,123 +310,6 @@ export function LandingPreview({ page, lang, editing = false, onChange }: { page
               ))}
             </ul>
           </Field>
-        )}
-      </Block>
-
-      <Block section="proof" page={page}>
-        <p className="text-base font-semibold">{T(page.headings.socialProof, (v) => update({ headings: { ...page.headings, socialProof: v } }), "Social proof heading")}</p>
-        {(page.socialProof.stats.length > 0 || editing) && (
-          <ul className={cn("grid gap-2", editing ? "sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-4")}>
-            {page.socialProof.stats.map((s, i) => {
-              const set = (patch: Partial<typeof s>) => update({ socialProof: { ...page.socialProof, stats: replaceAt(page.socialProof.stats, i, { ...s, ...patch }) } })
-              return (
-                <li key={i} className={cn("rounded-lg bg-muted/40 p-3", !editing && "text-center")}>
-                  {editing ? (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1">
-                        {T(s.value, (v) => set({ value: v }), `Stat ${i + 1} value`)}
-                        <RemoveButton label={`Remove stat ${i + 1}`} onClick={() => update({ socialProof: { ...page.socialProof, stats: removeAt(page.socialProof.stats, i) } })} />
-                      </div>
-                      {T(s.label, (v) => set({ label: v }), `Stat ${i + 1} label`)}
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-lg font-bold">
-                        <Marked text={s.value} />
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        <Marked text={s.label} />
-                      </p>
-                    </>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-        {editing && <AddButton onClick={() => update({ socialProof: { ...page.socialProof, stats: [...page.socialProof.stats, { value: "", label: "" }] } })}>Add stat</AddButton>}
-        {page.socialProof.testimonials.map((t, i) => {
-          const set = (patch: Partial<typeof t>) => update({ socialProof: { ...page.socialProof, testimonials: replaceAt(page.socialProof.testimonials, i, { ...t, ...patch }) } })
-          return editing ? (
-            <div key={i} className="space-y-1.5 rounded-lg border border-border p-3">
-              <div className="flex items-start gap-1">
-                {T(t.quote, (v) => set({ quote: v }), `Testimonial ${i + 1} quote`, true)}
-                <RemoveButton label={`Remove testimonial ${i + 1}`} onClick={() => update({ socialProof: { ...page.socialProof, testimonials: removeAt(page.socialProof.testimonials, i) } })} />
-              </div>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {T(t.name, (v) => set({ name: v }), `Testimonial ${i + 1} name`)}
-                {T(t.detail, (v) => set({ detail: v }), `Testimonial ${i + 1} detail`)}
-              </div>
-            </div>
-          ) : (
-            <figure key={i} className="rounded-lg border border-border p-3">
-              <blockquote>
-                <Marked text={t.quote} />
-              </blockquote>
-              <figcaption className="mt-1 text-xs text-muted-foreground">
-                <Marked text={[t.name, t.detail].filter(Boolean).join(", ")} />
-              </figcaption>
-            </figure>
-          )
-        })}
-        {editing && <AddButton onClick={() => update({ socialProof: { ...page.socialProof, testimonials: [...page.socialProof.testimonials, { quote: "", name: "", detail: "" }] } })}>Add testimonial</AddButton>}
-      </Block>
-
-      <Block section="faq" page={page}>
-        <p className="text-base font-semibold">{T(page.headings.faq, (v) => update({ headings: { ...page.headings, faq: v } }), "FAQ heading")}</p>
-        <dl className="space-y-3">
-          {page.faq.map((f, i) => {
-            const set = (patch: Partial<typeof f>) => update({ faq: replaceAt(page.faq, i, { ...f, ...patch }) })
-            return editing ? (
-              <div key={i} className="space-y-1.5">
-                <div className="flex items-start gap-1">
-                  {T(f.question, (v) => set({ question: v }), `Question ${i + 1}`, true)}
-                  <RemoveButton label={`Remove question ${i + 1}`} onClick={() => update({ faq: removeAt(page.faq, i) })} />
-                </div>
-                {T(f.answer, (v) => set({ answer: v }), `Answer ${i + 1}`, true)}
-              </div>
-            ) : (
-              <div key={i}>
-                <dt className="font-medium">
-                  <Marked text={f.question} />
-                </dt>
-                <dd className="text-muted-foreground">
-                  <Marked text={f.answer} />
-                </dd>
-              </div>
-            )
-          })}
-        </dl>
-        {editing && <AddButton onClick={() => update({ faq: [...page.faq, { question: "", answer: "" }] })}>Add question</AddButton>}
-      </Block>
-
-      <Block section="cta" page={page}>
-        {editing ? (
-          <div className="space-y-3">
-            <Field label="Headline">{T(page.cta.headline, (v) => update({ cta: { ...page.cta, headline: v } }), "CTA headline")}</Field>
-            <Field label="Description">{T(page.cta.description, (v) => update({ cta: { ...page.cta, description: v } }), "CTA description", true)}</Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Phone button">{T(page.cta.phoneButton, (v) => update({ cta: { ...page.cta, phoneButton: v } }), "Phone button text")}</Field>
-              <Field label="WhatsApp button">{T(page.cta.whatsappButton, (v) => update({ cta: { ...page.cta, whatsappButton: v } }), "WhatsApp button text")}</Field>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2 rounded-lg bg-primary/5 p-5 text-center">
-            <p className="text-base font-bold">
-              <Marked text={page.cta.headline} />
-            </p>
-            <p className="text-muted-foreground">
-              <Marked text={page.cta.description} />
-            </p>
-            <p className="flex flex-wrap justify-center gap-2 pt-1">
-              <span className="rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground">
-                <Marked text={page.cta.phoneButton} />
-              </span>
-              <span className="rounded-lg border border-primary px-4 py-2 font-semibold text-primary">
-                <Marked text={page.cta.whatsappButton} />
-              </span>
-            </p>
-          </div>
         )}
       </Block>
 
@@ -524,7 +372,7 @@ export function LandingPreview({ page, lang, editing = false, onChange }: { page
             return editing ? (
               <div key={i} className="space-y-1.5 rounded-lg border border-border p-3">
                 <div className="flex items-center gap-1">
-                  <Input aria-label={`Image ${i + 1} placement`} value={img.placement} onChange={(e) => set({ placement: e.target.value })} placeholder="Placement" className="w-32 shrink-0" />
+                  <Input aria-label={`Image ${i + 1} placement`} value={img.placement} onChange={(e) => set({ placement: e.target.value })} placeholder="Placement" className="w-40 shrink-0" />
                   <Input aria-label={`Image ${i + 1} file name`} dir="ltr" value={img.filename} onChange={(e) => set({ filename: e.target.value.toLowerCase().replace(/[^a-z0-9.-]+/g, "-") })} placeholder="file-name.webp" className="font-mono" />
                   <RemoveButton label={`Remove image ${i + 1}`} onClick={() => update({ imagePlan: { ...page.imagePlan, images: removeAt(page.imagePlan.images, i) } })} />
                 </div>

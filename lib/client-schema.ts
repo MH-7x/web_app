@@ -7,6 +7,7 @@ export type ClientInput = {
   emirate: string
   emiratesServed: string[] // other emirates served, never includes the primary one
   website: string
+  placeId: string // Google Places ID; empty when the business is not linked to Google yet
   phone: string // local part, e.g. "50 123 4567"
   whatsapp: string
   areas: string[]
@@ -36,6 +37,7 @@ export const EMPTY_CLIENT: ClientInput = {
   emirate: "",
   emiratesServed: [],
   website: "",
+  placeId: "",
   phone: "",
   whatsapp: "",
   areas: [],
@@ -55,7 +57,7 @@ export const EMPTY_CLIENT: ClientInput = {
 }
 
 export const STEP_FIELDS: (keyof ClientInput)[][] = [
-  ["category", "name", "nameAr", "emirate", "emiratesServed", "website", "phone", "whatsapp", "areas", "services"],
+  ["category", "name", "nameAr", "emirate", "emiratesServed", "website", "placeId", "phone", "whatsapp", "areas", "services"],
   ["primaryColor", "secondaryColor", "companyProfile", "facebookUrl", "instagramUrl", "driveLink", "otherLinks"],
   [],
 ]
@@ -64,6 +66,9 @@ const ARABIC = /[؀-ۿ]/
 const HEX = /^#[0-9a-fA-F]{6}$/
 
 export const MAX_COMPANY_PROFILE = 20000
+
+/** Google place IDs are URL-safe strings, usually starting "ChIJ". Kept loose because Google does not promise a format. */
+export const PLACE_ID_PATTERN = /^[A-Za-z0-9_-]{10,300}$/
 
 /** Strip everything but digits, drop a leading +971 / 971 / 0, return the national number. */
 export function normalizeUaeNumber(raw: string) {
@@ -151,6 +156,9 @@ export function validateClient(input: ClientInput, fields?: (keyof ClientInput)[
     }
   }
   check("website", websiteError)
+
+  const placeId = input.placeId.trim()
+  check("placeId", placeId && !PLACE_ID_PATTERN.test(placeId) ? "That does not look like a Google Place ID. Use Search Google, or paste an ID like ChIJ…" : null)
 
   const phone = normalizeUaeNumber(input.phone)
   check("phone", phone.length < 8 || phone.length > 9 ? "Enter a valid UAE number (e.g. 50 123 4567)." : null)
