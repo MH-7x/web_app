@@ -7,8 +7,9 @@ import { generateLandingPage } from "@/lib/generators/landing-page"
 import { parseLandingRequest } from "@/lib/landing-page-types"
 import { getSession } from "@/lib/auth"
 
-// a plan, a draft, section expansions and up to three revisions, each a model call
-export const maxDuration = 600
+// a plan, a draft, section expansions and up to three revisions, each a model call. 300 seconds is the most a Vercel Hobby
+// function may run; on a Pro plan this can go up to 800 (and REVISE_UNTIL_MS in the generator can be raised with it).
+export const maxDuration = 300
 
 /**
  * Generate landing page content for the client. Nothing is stored: the page is a draft until the user
