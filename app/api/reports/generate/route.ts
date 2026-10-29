@@ -6,9 +6,14 @@ import { db } from "@/lib/db"
 import { getModelName } from "@/lib/gemini"
 import { generateReport } from "@/lib/generators/reports"
 import { buildStats, parseReportRequest, renderReportMarkdown } from "@/lib/reports-types"
+import { getSession } from "@/lib/auth"
 
 /** Write a monthly report from manually entered figures and save it to the client's history. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { clientId, month, metrics, previous } = parseReportRequest(await readJson(request))
     const client = await getClient(clientId)

@@ -3,9 +3,14 @@ import { NextResponse } from "next/server"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { humanizePaste } from "@/lib/generators/humanizer"
 import { parseHumanizeRequest } from "@/lib/humanizer-types"
+import { getSession } from "@/lib/auth"
 
 /** Humanize pasted text and score it before and after. Nothing is saved. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { text, strictness } = parseHumanizeRequest(await readJson(request))
     const out = await humanizePaste(text, strictness)

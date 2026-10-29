@@ -3,9 +3,14 @@ import { NextResponse } from "next/server"
 import { BadRequestError } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 /** Bulk approve: every listed draft of this client becomes approved. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     if (typeof b.clientId !== "string" || !b.clientId) throw new BadRequestError("Select a client first.")

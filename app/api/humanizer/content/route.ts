@@ -5,12 +5,17 @@ import { db } from "@/lib/db"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { humanizeResult } from "@/lib/generators/humanizer"
 import { parseContentPayload, parseStrictness } from "@/lib/humanizer-types"
+import { getSession } from "@/lib/auth"
 
 /**
  * Humanize a generated piece of content and return the rewritten result with before/after scores. Nothing is saved.
  * Send either `{ id }` for a saved row, or `{ type, result }` for what is on screen in the Content preview.
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const strictness = parseStrictness(b.strictness)

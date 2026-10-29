@@ -5,6 +5,7 @@ import { DEFAULT_CATEGORY, isCategory } from "@/lib/constants"
 import { BadRequestError } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -15,6 +16,10 @@ async function clientCategory(id: string) {
 
 /** Every directory tracked for the client, with the directory's details, plus how many relevant directories aren't tracked yet. */
 export async function GET(_request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const category = await clientCategory(id)
@@ -28,6 +33,10 @@ export async function GET(_request: Request, { params }: Ctx) {
 
 /** Start tracking: creates an unchecked citation for every directory relevant to the client's category. Repeating it adds only new directories. */
 export async function POST(_request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const category = await clientCategory(id)
@@ -45,6 +54,10 @@ export async function POST(_request: Request, { params }: Ctx) {
  * A backlink source takes `{citationId, linkUrl?, linkStatus?}` instead (linkStatus: "" | pending | live | dead).
  */
 export async function PUT(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const b = await readJson(request)

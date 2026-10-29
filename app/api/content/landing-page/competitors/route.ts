@@ -7,6 +7,7 @@ import { BadRequestError } from "@/lib/content-types"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { generateSerpBrief } from "@/lib/generators/serp-brief"
 import { parseBriefOptions } from "@/lib/landing-page-types"
+import { getSession } from "@/lib/auth"
 
 // browser start-up, up to five pages, then one Gemini call
 export const maxDuration = 300
@@ -16,6 +17,10 @@ export const maxDuration = 300
  * writer from them. Nothing is attached to a landing page until the user generates one with this brief.
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const body = await readJson(request)
     if (typeof body.clientId !== "string" || !body.clientId) throw new BadRequestError("Select a client first.")

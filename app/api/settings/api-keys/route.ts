@@ -3,9 +3,14 @@ import { NextResponse } from "next/server"
 import { setEnvValue, maskSecret } from "@/lib/env-file"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 /** Update GEMINI_API_KEY: written back to .env and applied to the running server. The key is never sent back, only a masked form. */
 export async function PUT(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const key = typeof b.key === "string" ? b.key.trim() : ""

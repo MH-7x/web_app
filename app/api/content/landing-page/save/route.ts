@@ -7,12 +7,17 @@ import type { Prisma } from "@/lib/generated/prisma/client"
 import { getModelName } from "@/lib/gemini"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { landingMarkdown, normalizeLandingResult, parseLandingOptions } from "@/lib/landing-page-types"
+import { getSession } from "@/lib/auth"
 
 /**
  * Save a generated landing page to the client's content history. Send the `id` from an earlier save to
  * update that item instead of adding a second one (the user edited the page after saving it).
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const body = await readJson(request)
     if (typeof body.clientId !== "string" || !body.clientId) throw new BadRequestError("Select a client first.")

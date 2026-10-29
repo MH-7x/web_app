@@ -6,6 +6,7 @@ import { fail, handleError } from "@/lib/gbp-posts-api"
 import { parseKeywordFile } from "@/lib/keyword-import"
 import { parseStoredKeywords, toData } from "@/lib/keyword-groups"
 import { MAX_KEYWORDS_PER_GROUP, mergeRows } from "@/lib/keywords-types"
+import { getSession } from "@/lib/auth"
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -14,6 +15,10 @@ type Ctx = { params: Promise<{ id: string }> }
  * Send multipart form data: `file`, optionally `preview=1` (parse only, save nothing) and `onDuplicate=skip|update`.
  */
 export async function POST(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     let form: FormData

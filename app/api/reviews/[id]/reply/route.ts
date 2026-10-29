@@ -6,6 +6,7 @@ import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { draftReviewReply } from "@/lib/generators/review-reply"
 import { MAX_REPLY_LENGTH } from "@/lib/reviews-types"
+import { getSession } from "@/lib/auth"
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -22,6 +23,10 @@ function replyText(value: unknown) {
  * - mark_replied: mark it "replied" now; an optional `{text}` keeps the reply that was actually posted
  */
 export async function POST(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const b = await readJson(request)

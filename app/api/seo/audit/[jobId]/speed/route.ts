@@ -4,9 +4,14 @@ import { submitSpeedSelection } from "@/lib/audit/jobs"
 import type { SpeedSelection } from "@/lib/audit/types"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 /** Answer the "which pages should be speed tested?" question of a paused audit. An empty list skips the speed tests. */
 export async function POST(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { jobId } = await params
     const b = await readJson(request)

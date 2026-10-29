@@ -4,9 +4,14 @@ import { listClientCitations } from "@/lib/citations"
 import { checkUrl, isNapCitation } from "@/lib/citations-types"
 import { db } from "@/lib/db"
 import { fail, handleError } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 /** A Google search for each directory not checked yet, `[{citationId, sourceName, searchUrl}]`, for the page to open as tabs. */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const client = await db.client.findUnique({ where: { id }, select: { name: true } })

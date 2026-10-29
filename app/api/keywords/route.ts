@@ -5,9 +5,14 @@ import { db } from "@/lib/db"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { cleanClientId, cleanName, listKeywordGroups, summarize, toData } from "@/lib/keyword-groups"
 import { normalizeRows, MAX_KEYWORDS_PER_GROUP } from "@/lib/keywords-types"
+import { getSession } from "@/lib/auth"
 
 /** Every keyword group, without the keyword rows. */
 export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return NextResponse.json({ groups: await listKeywordGroups() })
   } catch (error) {
@@ -17,6 +22,10 @@ export async function GET() {
 
 /** Create a group, optionally with starting keywords. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const keywords = normalizeRows(b.keywords)

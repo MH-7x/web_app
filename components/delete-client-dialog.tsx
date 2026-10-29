@@ -52,7 +52,11 @@ export function DeleteClientDialog({
             onClick={() =>
               startTransition(async () => {
                 try {
-                  await deleteClientAction(clientId)
+                  const result = await deleteClientAction(clientId)
+                  if (result && !result.ok) {
+                    toast.error(result.message)
+                    return
+                  }
                   toast.success("Client deleted", { description: clientName })
                   setOpen(false)
                   if (redirectTo) router.push(redirectTo)

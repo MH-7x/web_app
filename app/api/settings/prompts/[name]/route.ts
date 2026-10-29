@@ -4,9 +4,14 @@ import { BadRequestError } from "@/lib/content-types"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { saveTemplate } from "@/lib/prompts/store"
 import { examplesProblem, getDef, templateProblems, type TemplateName } from "@/lib/prompts/templates"
+import { getSession } from "@/lib/auth"
 
 /** Save an edited prompt template. Generators read it on their next run. */
 export async function PUT(request: Request, { params }: { params: Promise<{ name: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { name } = await params
     const def = getDef(name)

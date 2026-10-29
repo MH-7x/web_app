@@ -4,9 +4,15 @@ import { getClient } from "@/lib/clients"
 import { listPostsForMonth } from "@/lib/gbp-posts"
 import { fail, handleError } from "@/lib/gbp-posts-api"
 import { CTAS, POST_TYPES, isMonthKey, monthLabel } from "@/lib/gbp-posts-types"
+import { NextResponse } from "next/server"
+import { getSession } from "@/lib/auth"
 
 /** XLSX of the month's approved posts: Date, Text AR, Text EN, Post Type, CTA, Image Prompt. */
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return await exportMonth(request)
   } catch (error) {

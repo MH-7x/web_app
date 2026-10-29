@@ -9,11 +9,16 @@ import {
 import { db } from "@/lib/db"
 import { unitsOf } from "@/lib/humanizer-types"
 import type { Prisma } from "@/lib/generated/prisma/client"
+import { getSession } from "@/lib/auth"
 
 const asObject = (v: unknown): Record<string, unknown> => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {})
 
 /** Save edits made to a generated piece in the Content workspace. */
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   const { id } = await params
 
   let body: unknown

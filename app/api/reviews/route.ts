@@ -5,12 +5,17 @@ import { db } from "@/lib/db"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { listReviews, toReviewDTO } from "@/lib/reviews"
 import { MAX_AUTHOR_NAME, MAX_REVIEW_TEXT, isReplyStatus } from "@/lib/reviews-types"
+import { getSession } from "@/lib/auth"
 
 const ARABIC = /[؀-ۿ]/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Reviews, newest first. Optional filters: clientId, rating (positive | negative | 1–5), replyStatus (none | drafted | replied). */
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const params = new URL(request.url).searchParams
     const clientId = params.get("clientId") || undefined
@@ -33,6 +38,10 @@ export async function GET(request: Request) {
 
 /** Add a review copied from Google: `{clientId, authorName, rating, text, date?}`. The language is detected from the text. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const clientId = typeof b.clientId === "string" ? b.clientId : ""

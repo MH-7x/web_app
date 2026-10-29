@@ -4,9 +4,14 @@ import type { BusinessSettings } from "@/lib/business-types"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { saveBusinessSettings } from "@/lib/settings"
+import { getSession } from "@/lib/auth"
 
 /** Save the business name, tagline and proposal terms shown on proposals. */
 export async function PUT(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "")

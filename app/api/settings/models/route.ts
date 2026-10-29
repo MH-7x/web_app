@@ -4,6 +4,7 @@ import { setEnvValue } from "@/lib/env-file"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { getModelName } from "@/lib/gemini"
+import { getSession } from "@/lib/auth"
 
 export type GeminiModelInfo = {
   /** Id to put in GEMINI_MODEL, e.g. gemini-2.5-pro */
@@ -33,6 +34,10 @@ const INVALID_KEY = "Invalid API key — set a valid Gemini API key first."
 
 /** Models the saved API key can use for generateContent, plus the one currently active. */
 export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) throw new BadRequestError(INVALID_KEY)
@@ -74,6 +79,10 @@ export async function GET() {
 
 /** Save the chosen model as GEMINI_MODEL; applies to the running server immediately. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const model = typeof b.model === "string" ? b.model.trim().replace(/^models\//, "") : ""

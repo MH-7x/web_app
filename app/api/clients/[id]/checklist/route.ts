@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { ensureChecklist, parseChecklistChange, updateChecklist, type ChecklistChange } from "@/lib/onboarding-checklist"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 const NOT_FOUND = "That client no longer exists."
 
@@ -13,6 +14,10 @@ async function apply(request: Request, params: Promise<{ id: string }>, action: 
 
 /** The client's onboarding checklist. A client that has none yet gets its category's default list. */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const items = await ensureChecklist(id)
@@ -24,6 +29,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
 /** Tick or untick a task: { id, checked }. The completion date is recorded when it is ticked. */
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return await apply(request, params, "toggle")
   } catch (error) {
@@ -33,6 +42,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 /** Add a custom task: { label, section }. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return await apply(request, params, "add")
   } catch (error) {
@@ -42,6 +55,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
 /** Remove a custom task: { id }. The default tasks can't be removed. */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return await apply(request, params, "remove")
   } catch (error) {

@@ -5,11 +5,16 @@ import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { runSample } from "@/lib/prompts/sample-run"
 import { withTemplateDraft } from "@/lib/prompts/store"
 import { examplesProblem, getDef, templateProblems, type TemplateName } from "@/lib/prompts/templates"
+import { getSession } from "@/lib/auth"
 
 export const maxDuration = 300
 
 /** Run the real generator against a made-up client using the draft in the editor (saved or not). Nothing is stored. */
 export async function POST(request: Request, { params }: { params: Promise<{ name: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { name } = await params
     const def = getDef(name)

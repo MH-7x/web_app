@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { handleError } from "@/lib/gbp-posts-api"
 import { parseReviewFile, reviewKey } from "@/lib/review-import"
 import type { ImportPreview } from "@/lib/reviews-types"
+import { getSession } from "@/lib/auth"
 
 const ARABIC = /[؀-ۿ]/
 const SAMPLE_ROWS = 8
@@ -16,6 +17,10 @@ const MAX_PROBLEMS_SHOWN = 50
  * Valid rows are imported and bad rows are reported; a row already saved for the client (same reviewer, day and text) is skipped.
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     let form: FormData
     try {

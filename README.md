@@ -33,8 +33,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
 ```
 web_app
 ├─ AGENTS.md
@@ -256,7 +254,6 @@ web_app
 │  │  ├─ setup-indicator.tsx
 │  │  └─ setup-progress.tsx
 │  ├─ clients-filters.tsx
-│  ├─ coming-soon.tsx
 │  ├─ content
 │  │  ├─ blog-panel.tsx
 │  │  ├─ competitor-insights.tsx
@@ -278,6 +275,7 @@ web_app
 │  │  ├─ generate-wizard.tsx
 │  │  ├─ post-detail.tsx
 │  │  └─ publish-actions.tsx
+│  ├─ gemini-key-banner.tsx
 │  ├─ history-item.tsx
 │  ├─ humanizer
 │  │  ├─ batch-mode.tsx
@@ -289,6 +287,7 @@ web_app
 │  │  ├─ keyword-table.tsx
 │  │  ├─ summary-cards.tsx
 │  │  └─ workspace.tsx
+│  ├─ network-error-shim.tsx
 │  ├─ proposals
 │  │  ├─ project-form.tsx
 │  │  ├─ proposal-document.tsx

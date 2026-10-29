@@ -4,6 +4,7 @@ import { listCompetitors, toCompetitorDTO } from "@/lib/citations"
 import { BadRequestError } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -29,6 +30,10 @@ async function parseSourceIds(value: unknown) {
 
 /** The competitors tracked for the client and the directories each is listed on. */
 export async function GET(_request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     if (!(await requireClient(id))) return fail("That client no longer exists.", 404)
@@ -40,6 +45,10 @@ export async function GET(_request: Request, { params }: Ctx) {
 
 /** Add a competitor: `{name, sourceIds?}`. Only yes or no per directory, no name/address/phone checks. */
 export async function POST(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     if (!(await requireClient(id))) return fail("That client no longer exists.", 404)
@@ -54,6 +63,10 @@ export async function POST(request: Request, { params }: Ctx) {
 
 /** Edit a competitor: `{competitorId, name?, sourceIds?}`. */
 export async function PUT(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const b = await readJson(request)
@@ -72,6 +85,10 @@ export async function PUT(request: Request, { params }: Ctx) {
 
 /** Stop tracking a competitor: `?competitorId=`. */
 export async function DELETE(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const competitorId = new URL(request.url).searchParams.get("competitorId")

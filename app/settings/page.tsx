@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { connection } from "next/server"
 import { Suspense } from "react"
 
+import { getSession } from "@/lib/auth"
 import { SettingsSkeleton } from "@/components/skeletons"
 import { SettingsWorkspace } from "@/components/settings/workspace"
 import { maskSecret } from "@/lib/env-file"
@@ -25,6 +26,8 @@ export default function SettingsPage() {
 async function Loaded() {
   await connection()
   // listing also creates any prompt template that is not in the database yet
-  const [templates, business] = await Promise.all([listTemplates(), getBusinessSettings()])
-  return <SettingsWorkspace templates={templates} maskedKey={maskSecret(process.env.GEMINI_API_KEY)} model={getModelName()} business={business} />
+  const [templates, business, session] = await Promise.all([listTemplates(), getBusinessSettings(), getSession()])
+  // no session cannot really happen here (proxy.ts and the layout turn it away); the lowest role is the safe fallback
+  const user = { userId: session?.userId ?? "", role: session?.role ?? "admin" }
+  return <SettingsWorkspace templates={templates} maskedKey={maskSecret(process.env.GEMINI_API_KEY)} model={getModelName()} business={business} user={user} />
 }

@@ -6,6 +6,7 @@ import type { AuditInput, KeywordPair } from "@/lib/audit/types"
 import { getClient } from "@/lib/clients"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 const stripWww = (h: string) => h.replace(/^www\./i, "").toLowerCase()
 
@@ -46,6 +47,10 @@ function parseKeywordPairs(raw: unknown, site: URL): KeywordPair[] {
 
 /** Start an audit of the client's website in the background. Returns the job to poll. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     if (typeof b.clientId !== "string" || !b.clientId) throw new BadRequestError("Select a client first.")

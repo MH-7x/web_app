@@ -8,9 +8,14 @@ import { asStringArray } from "@/lib/client-schema"
 import { dateKey, POST_CATEGORIES, type PostCategory, type PostLanguage } from "@/lib/gbp-posts-types"
 import { regeneratePost } from "@/lib/generators/gbp-posts"
 import { getCategoryFallbackServices } from "@/lib/prompts/templates"
+import { getSession } from "@/lib/auth"
 
 /** New text and image prompt for one post; its day and angle stay. It goes back to draft. */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const row = await db.gBPPost.findUnique({ where: { id } })

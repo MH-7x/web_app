@@ -1,9 +1,15 @@
 import { IMPORT_HEADERS } from "@/lib/reviews-types"
+import { NextResponse } from "next/server"
+import { getSession } from "@/lib/auth"
 
 const quote = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
 
 /** A ready-to-fill CSV with the four columns and two example rows (one Arabic). The BOM makes Excel read the Arabic correctly. */
-export function GET() {
+export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   const rows = [
     IMPORT_HEADERS as readonly string[],
     ["Omar Khalid", "5", "28/10/2026", "Great service, on time and careful with the furniture."],

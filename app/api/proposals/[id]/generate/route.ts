@@ -6,11 +6,16 @@ import { fail, handleError } from "@/lib/gbp-posts-api"
 import { generateProposal } from "@/lib/generators/proposals"
 import { getProject } from "@/lib/proposals"
 import { validateProject } from "@/lib/proposals-types"
+import { getSession } from "@/lib/auth"
 
 export const maxDuration = 300
 
 /** Write the proposal for a project with Gemini and save it on the project, replacing any earlier one. */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const project = await getProject(id)

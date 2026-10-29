@@ -5,10 +5,15 @@ import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { getProject, isStatus, toColumns } from "@/lib/proposals"
 import { sanitizeProject, validateProject } from "@/lib/proposals-types"
+import { getSession } from "@/lib/auth"
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(_request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const project = await getProject((await params).id)
     return project ? NextResponse.json({ project }) : fail("That project no longer exists.", 404)
@@ -22,6 +27,10 @@ export async function GET(_request: Request, { params }: Ctx) {
  * `status` or `proposal` (the edited proposal text). Fields that are not sent stay as they are.
  */
 export async function PUT(request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const existing = await getProject(id)
@@ -52,6 +61,10 @@ export async function PUT(request: Request, { params }: Ctx) {
 }
 
 export async function DELETE(_request: Request, { params }: Ctx) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     await db.project.deleteMany({ where: { id: (await params).id } })
     return NextResponse.json({ ok: true })

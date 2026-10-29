@@ -37,6 +37,7 @@ import { HistoryItem } from "@/components/history-item"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, Eyebrow } from "@/components/ui/card"
+import { getSession } from "@/lib/auth"
 import { displayDomain, formatPhone, normalizeUaeNumber } from "@/lib/client-schema"
 import { getClient, getClientContentStats, listClientContent, type ClientDetail } from "@/lib/clients"
 import { CONTENT_TYPES, INITIAL_SETUP_OPTIONS } from "@/lib/constants"
@@ -66,8 +67,9 @@ async function ClientDetailContent({
 }) {
   await connection()
   const [{ id }, sp] = await Promise.all([params, searchParams])
-  const [client, stats] = await Promise.all([getClient(id), getClientContentStats(id)])
+  const [client, stats, session] = await Promise.all([getClient(id), getClientContentStats(id), getSession()])
   if (!client) notFound()
+  const canDelete = session?.role === "super_admin"
 
   const tabParam = first(sp.tab)
   const tab = (["history", "activity", "onboarding", "settings"] as const).find((t) => t === tabParam) ?? "overview"
@@ -100,17 +102,19 @@ async function ClientDetailContent({
             <Link href={`/clients/${client.id}/edit`} className={buttonVariants({ variant: "outline", size: "lg" })}>
               <Pencil /> Edit Client
             </Link>
-            <DeleteClientDialog
-              clientId={client.id}
-              clientName={client.name}
-              contentCount={stats.total}
-              redirectTo="/clients"
-              trigger={
-                <Button variant="destructive" size="lg">
-                  <Trash2 /> Delete
-                </Button>
-              }
-            />
+            {canDelete && (
+              <DeleteClientDialog
+                clientId={client.id}
+                clientName={client.name}
+                contentCount={stats.total}
+                redirectTo="/clients"
+                trigger={
+                  <Button variant="destructive" size="lg">
+                    <Trash2 /> Delete
+                  </Button>
+                }
+              />
+            )}
           </div>
         </div>
       </Card>

@@ -5,12 +5,17 @@ import { BadRequestError } from "@/lib/content-types"
 import { startPostsJob } from "@/lib/gbp-jobs"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { MAX_KEYWORDS, MAX_WEEKS, POST_LANGUAGES, POSTS_PER_WEEK, isDateKey, type PostLanguage } from "@/lib/gbp-posts-types"
+import { getSession } from "@/lib/auth"
 
 /**
  * Start writing posts: `weeks` weeks at exactly 3 posts a week, covering the given keywords, in the chosen language.
  * Returns a job; posts are saved as drafts as they are written.
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     if (typeof b.clientId !== "string" || !b.clientId) throw new BadRequestError("Choose a business first.")

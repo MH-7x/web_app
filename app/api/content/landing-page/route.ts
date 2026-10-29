@@ -5,6 +5,7 @@ import { BadRequestError } from "@/lib/content-types"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { generateLandingPage } from "@/lib/generators/landing-page"
 import { parseLandingRequest } from "@/lib/landing-page-types"
+import { getSession } from "@/lib/auth"
 
 // a plan, a draft, section expansions and up to three revisions, each a model call
 export const maxDuration = 600
@@ -14,6 +15,10 @@ export const maxDuration = 600
  * chooses Save to History (POST /api/content/landing-page/save).
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const body = await readJson(request)
     if (typeof body.clientId !== "string" || !body.clientId) throw new BadRequestError("Select a client first.")

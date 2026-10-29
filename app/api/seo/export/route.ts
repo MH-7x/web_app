@@ -2,6 +2,8 @@ import { reportHtml, reportMarkdown, type ReportInput } from "@/lib/audit/report
 import type { AuditPayloadV2, AuditScoresV2, KeywordCheck, LogEntry, RecommendationV2 } from "@/lib/audit/types"
 import { db } from "@/lib/db"
 import { fail, handleError } from "@/lib/gbp-posts-api"
+import { NextResponse } from "next/server"
+import { getSession } from "@/lib/auth"
 
 const parseList = <T,>(raw: string): T[] => {
   try {
@@ -16,6 +18,10 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(
 
 /** Download a saved audit as JSON (everything), Markdown or a self-contained HTML report. */
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return await exportAudit(request)
   } catch (error) {

@@ -5,9 +5,14 @@ import { db } from "@/lib/db"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { getProject, listProjects, toColumns } from "@/lib/proposals"
 import { sanitizeProject, validateProject } from "@/lib/proposals-types"
+import { getSession } from "@/lib/auth"
 
 /** All projects, newest first. `?status=draft|sent|accepted|declined` filters. */
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     return NextResponse.json({ projects: await listProjects(new URL(request.url).searchParams.get("status") ?? undefined) })
   } catch (error) {
@@ -17,6 +22,10 @@ export async function GET(request: Request) {
 
 /** Create a project from the form, or copy an existing one with `{ duplicateOf: id }`. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
 

@@ -4,6 +4,7 @@ import { listSources, parseSourceInput, toSourceDTO } from "@/lib/citations"
 import { BadRequestError } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 /** A name is unique, so a second directory with the same name is refused instead of failing deep in the database. */
 async function assertNameFree(name: string, exceptId?: string) {
@@ -13,6 +14,10 @@ async function assertNameFree(name: string, exceptId?: string) {
 
 /** The master list of directories, shared by every client. Optional filters: category, priority, relevantFor (moving | used_furniture | pickup_rental), sourceType (nap_citation | backlink). */
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const p = new URL(request.url).searchParams
     const sources = await listSources({
@@ -29,6 +34,10 @@ export async function GET(request: Request) {
 
 /** Add a directory: `{name, url, submitUrl?, sourceType?, category?, relevantFor?, napFields?, isFree?, priority?, tier?, domainAuthority?, notes?}`. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const data = parseSourceInput(await readJson(request), false)
     await assertNameFree(data.name as string)
@@ -41,6 +50,10 @@ export async function POST(request: Request) {
 
 /** Edit a directory: `{id, ...fields}`. Only the fields sent are changed. */
 export async function PUT(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     const id = typeof b.id === "string" ? b.id : ""
@@ -57,6 +70,10 @@ export async function PUT(request: Request) {
 
 /** Remove a directory with `?id=`. Every client's citation record for it goes too. */
 export async function DELETE(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const id = new URL(request.url).searchParams.get("id")
     if (!id) throw new BadRequestError("Missing id.")

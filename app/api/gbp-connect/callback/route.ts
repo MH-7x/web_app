@@ -2,11 +2,16 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
 import { GbpApiError, handleCallback, originOf } from "@/lib/gbp-api"
+import { getSession } from "@/lib/auth"
 
 const NONCE_COOKIE = "gbp_oauth_nonce"
 
 /** Where Google sends the user after the consent screen. Saves the connection, then returns to the client's settings tab. */
 export async function GET(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   const origin = originOf(request)
   const params = new URL(request.url).searchParams
   const [clientId, nonce] = (params.get("state") ?? "").split(".")

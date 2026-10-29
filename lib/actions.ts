@@ -14,12 +14,16 @@ import {
   type ClientInput,
   type FieldErrors,
 } from "@/lib/client-schema"
+import { getSession } from "@/lib/auth"
 import { ACTIVE_CLIENT_COOKIE, DEFAULT_CATEGORY, isCategory } from "@/lib/constants"
 import { db } from "@/lib/db"
 import { getDefaultChecklist } from "@/lib/onboarding-templates"
 
 export type ActionResult = { ok: false; errors: FieldErrors; message?: string }
 export type CreateResult = ActionResult | { ok: true; id: string }
+export type DeleteResult = { ok: false; message: string } | undefined
+
+const SIGNED_OUT = "Your session has expired. Please log in again."
 
 const str = (v: unknown) => (typeof v === "string" ? v : "")
 const strList = (v: unknown) =>
@@ -94,6 +98,8 @@ function toColumns(input: ClientInput) {
 
 /** With `navigate: false` the client is saved and its id returned, so onboarding can generate content before leaving the page. */
 export async function createClientAction(raw: unknown, options: { navigate?: boolean } = {}): Promise<CreateResult> {
+  // Server Actions are public POST endpoints too, so they check the session themselves
+  if (!(await getSession())) return { ok: false, errors: {}, message: SIGNED_OUT }
   const input = sanitize(raw)
   const errors = validateClient(input)
   if (Object.keys(errors).length) return { ok: false, errors }
@@ -117,6 +123,7 @@ export async function createClientAction(raw: unknown, options: { navigate?: boo
 }
 
 export async function updateClientAction(id: string, raw: unknown, options: { navigate?: boolean } = {}): Promise<CreateResult> {
+  if (!(await getSession())) return { ok: false, errors: {}, message: SIGNED_OUT }
   const input = sanitize(raw)
   const errors = validateClient(input)
   if (Object.keys(errors).length) return { ok: false, errors }
@@ -142,7 +149,11 @@ export async function updateClientAction(id: string, raw: unknown, options: { na
   redirect(`/clients/${id}`)
 }
 
-export async function deleteClientAction(id: string, redirectTo?: string) {
+/** Deleting a client wipes its content, reviews and citations, so only the super admin may. */
+export async function deleteClientAction(id: string, redirectTo?: string): Promise<DeleteResult> {
+  const session = await getSession()
+  if (!session) return { ok: false, message: SIGNED_OUT }
+  if (session.role !== "super_admin") return { ok: false, message: "Only the super admin can delete clients." }
   await db.client.deleteMany({ where: { id } }) // cascades to GeneratedContent; no throw if already gone
   const jar = await cookies()
   if (jar.get(ACTIVE_CLIENT_COOKIE)?.value === id) jar.delete(ACTIVE_CLIENT_COOKIE)
@@ -151,6 +162,7 @@ export async function deleteClientAction(id: string, redirectTo?: string) {
 }
 
 export async function setActiveClientAction(id: string | null) {
+  if (!(await getSession())) return
   const jar = await cookies()
   if (id && (await db.client.findUnique({ where: { id }, select: { id: true } }))) {
     jar.set(ACTIVE_CLIENT_COOKIE, id, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" })

@@ -5,12 +5,17 @@ import { BadRequestError } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { checkLink } from "@/lib/link-check"
+import { getSession } from "@/lib/auth"
 
 /**
  * Check a backlink: `{citationId}`. Loads the recorded link URL and sets the status to live or dead. When the site blocks the
  * check or times out nothing is proven, so the status is left as it was. Returns `{citation, result}`.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const b = await readJson(request)

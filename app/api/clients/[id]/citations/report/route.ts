@@ -7,12 +7,17 @@ import { BadRequestError } from "@/lib/content-types"
 import { db } from "@/lib/db"
 import { fail, handleError } from "@/lib/gbp-posts-api"
 import { buildCitationReport } from "@/lib/generators/citation-report"
+import { getSession } from "@/lib/auth"
 
 /**
  * A citation report for a client meeting, as markdown: `{markdown}`. Covers the NAP score, directories listed, issues and their
  * status, a comparison with the top competitor (when competitors are tracked) and recommended next actions.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     const client = await db.client.findUnique({ where: { id }, select: { name: true, category: true, emirate: true } })

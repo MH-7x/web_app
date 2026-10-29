@@ -4,6 +4,7 @@ import { listClientCitations } from "@/lib/citations"
 import { computeBacklinks, computeScore } from "@/lib/citations-types"
 import { db } from "@/lib/db"
 import { fail, handleError } from "@/lib/gbp-posts-api"
+import { getSession } from "@/lib/auth"
 
 /**
  * The NAP consistency score: correct name, address, phone and website fields across the client's listings, as a percent of the
@@ -11,6 +12,10 @@ import { fail, handleError } from "@/lib/gbp-posts-api"
  * citation sources are scored; `backlinks` counts the backlink sources separately ({total, live, pending, dead, notCreated}).
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const { id } = await params
     if (!(await db.client.findUnique({ where: { id }, select: { id: true } }))) return fail("That client no longer exists.", 404)

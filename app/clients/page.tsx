@@ -12,6 +12,7 @@ import { ClientsFilters } from "@/components/clients-filters"
 import { DeleteClientDialog } from "@/components/delete-client-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { getSession } from "@/lib/auth"
 import { displayDomain } from "@/lib/client-schema"
 import { getEmirateCounts, listClients } from "@/lib/clients"
 import { PAGE_SIZE } from "@/lib/constants"
@@ -46,6 +47,7 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
   const category = first(sp.category)
   const requested = Math.max(1, Number.parseInt(first(sp.page), 10) || 1)
 
+  const canDelete = (await getSession())?.role === "super_admin"
   const emirateCounts = await getEmirateCounts()
   const { items, total } = await listClients({ q, emirate, category }, requested)
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -144,16 +146,18 @@ async function ClientsContent({ searchParams }: { searchParams: PageProps<"/clie
                       >
                         <Pencil />
                       </Link>
-                      <DeleteClientDialog
-                        clientId={c.id}
-                        clientName={c.name}
-                        contentCount={c.contentCount}
-                        trigger={
-                          <Button variant="ghost" size="icon-sm" aria-label={`Delete ${c.name}`} className="hover:text-destructive">
-                            <Trash2 />
-                          </Button>
-                        }
-                      />
+                      {canDelete && (
+                        <DeleteClientDialog
+                          clientId={c.id}
+                          clientName={c.name}
+                          contentCount={c.contentCount}
+                          trigger={
+                            <Button variant="ghost" size="icon-sm" aria-label={`Delete ${c.name}`} className="hover:text-destructive">
+                              <Trash2 />
+                            </Button>
+                          }
+                        />
+                      )}
                     </div>
                   </td>
                 </tr>

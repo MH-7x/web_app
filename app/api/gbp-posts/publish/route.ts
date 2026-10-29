@@ -6,6 +6,7 @@ import { freshConnection, publishPost } from "@/lib/gbp-api"
 import { toPostDTO } from "@/lib/gbp-posts"
 import { handleError, fail, readJson } from "@/lib/gbp-posts-api"
 import { GBP_POST_MAX } from "@/lib/gbp-posts-types"
+import { getSession } from "@/lib/auth"
 
 /** First sentence of the post, short enough for the title Offer and Event posts require. */
 const titleOf = (text: string) => {
@@ -18,6 +19,10 @@ const titleOf = (text: string) => {
  * Google posts are one language each, so a bilingual post goes out in `lang` (default: Arabic, the primary version).
  */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     if (typeof b.id !== "string" || !b.id) throw new BadRequestError("Missing post id.")

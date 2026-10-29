@@ -5,12 +5,17 @@ import { db } from "@/lib/db"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { savePaste } from "@/lib/humanizer-store"
 import { PASTE_MAX_CHARS, parseStrictness } from "@/lib/humanizer-types"
+import { getSession } from "@/lib/auth"
 
 const text = (v: unknown) => (typeof v === "string" ? v.trim().slice(0, PASTE_MAX_CHARS * 2) : "")
 const score = (v: unknown) => Math.min(100, Math.max(0, Math.round(Number(v) || 0)))
 
 /** Save a paste-mode rewrite to the client's Content History. */
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
   try {
     const b = await readJson(request)
     if (typeof b.clientId !== "string" || !b.clientId) throw new BadRequestError("Select a client first.")
