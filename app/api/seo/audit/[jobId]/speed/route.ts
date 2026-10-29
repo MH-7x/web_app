@@ -4,7 +4,7 @@ import type { SpeedSelection } from "@/lib/audit/types"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { getSession } from "@/lib/auth"
-import { forwardToWorker } from "@/lib/worker"
+import { isLive, liveDisabled } from "@/lib/live"
 
 /** Answer the "which pages should be speed tested?" question of a paused audit. An empty list skips the speed tests. */
 export async function POST(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
@@ -12,9 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ job
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  // the long jobs run on the worker (see lib/worker.ts); with none configured they run right here
-  const forwarded = await forwardToWorker(request, session.userId)
-  if (forwarded) return forwarded
+  if (isLive()) return liveDisabled("The SEO audit")
   try {
     const { jobId } = await params
     const b = await readJson(request)

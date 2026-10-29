@@ -10,6 +10,7 @@ import { ContentWorkspace } from "@/components/content/workspace"
 import { buttonVariants } from "@/components/ui/button"
 import { getClient } from "@/lib/clients"
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
+import { isLive } from "@/lib/live"
 
 export const metadata: Metadata = { title: "Content" }
 
@@ -50,6 +51,7 @@ async function ActiveClientWorkspace() {
   return (
     <ContentWorkspace
       key={client.id}
+      landingPageDisabled={isLive()}
       client={{
         id: client.id,
         name: client.name,

@@ -28,6 +28,7 @@ export function CalendarWorkspace({
   posts,
   wizardClients,
   activeJob,
+  generationDisabled,
 }: {
   client: GbpClient
   month: string
@@ -35,6 +36,8 @@ export function CalendarWorkspace({
   posts: PostDTO[]
   wizardClients: WizardClient[]
   activeJob: GbpJobSnapshot | null
+  /** true on the live site: writing posts runs for minutes, so it is done from the app on your computer (lib/live.ts) */
+  generationDisabled: boolean
 }) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(posts[0]?.id ?? null)
@@ -110,7 +113,13 @@ export function CalendarWorkspace({
               <Download /> Export Month (XLSX)
             </Button>
           )}
-          <GenerateWizard clients={wizardClients} activeClientId={client.id} baseDate={baseDate} activeJob={activeJob} />
+          {generationDisabled ? (
+            <Button size="lg" disabled title="Writing posts runs from the app on your computer. The posts it saves appear here.">
+              <Sparkles /> Generate posts
+            </Button>
+          ) : (
+            <GenerateWizard clients={wizardClients} activeClientId={client.id} baseDate={baseDate} activeJob={activeJob} />
+          )}
         </div>
       </Card>
 
@@ -251,7 +260,7 @@ export function CalendarWorkspace({
             </ul>
             {emptyWeeks.length > 0 && (
               <p className="rounded-lg bg-destructive/5 p-3 text-xs text-muted-foreground">
-                Empty weeks (highlighted red): {emptyWeeks.map((w) => weekLabel(w[0].key)).join(", ")}. Use Generate Posts to fill them.
+                Empty weeks (highlighted red): {emptyWeeks.map((w) => weekLabel(w[0].key)).join(", ")}. {generationDisabled ? "Generate them from the app on your computer." : "Use Generate Posts to fill them."}
               </p>
             )}
           </Card>
@@ -278,10 +287,12 @@ export function CalendarWorkspace({
         <PostDetail key={selected.id} post={selected} clientName={client.name} phone={client.phone} brandColor={client.primaryColor} gbpLocation={client.gbpLocation} onDeleted={() => setSelectedId(null)} />
       ) : (
         posts.length === 0 ? (
-          <EmptyState icon={CalendarDays} title={`No posts in ${monthLabel(month)} yet`} description="Draft a few weeks of Google Business Profile posts in one go: three a week, in Arabic, English or both, covering your keywords.">
-            <Button onClick={() => document.getElementById("gbp-generate-trigger")?.click()}>
-              <Sparkles /> Generate posts
-            </Button>
+          <EmptyState icon={CalendarDays} title={`No posts in ${monthLabel(month)} yet`} description={generationDisabled ? "Posts are written from the app on your computer. They are saved to the shared database and appear on this calendar." : "Draft a few weeks of Google Business Profile posts in one go: three a week, in Arabic, English or both, covering your keywords."}>
+            {!generationDisabled && (
+              <Button onClick={() => document.getElementById("gbp-generate-trigger")?.click()}>
+                <Sparkles /> Generate posts
+              </Button>
+            )}
           </EmptyState>
         ) : (
           <div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-12 text-center text-sm text-muted-foreground">Select a post on the calendar to read, edit or approve it.</div>

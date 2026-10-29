@@ -6,6 +6,7 @@ import { connection } from "next/server"
 import { Suspense } from "react"
 
 import { EmptyState } from "@/components/empty-state"
+import { LocalOnlyNotice } from "@/components/local-only-notice"
 import { DeleteAudit } from "@/components/seo/delete-audit"
 import { StartAuditButton } from "@/components/seo/start-audit-button"
 import { AuditSkeleton } from "@/components/skeletons"
@@ -16,14 +17,13 @@ import { ScoreRing, scoreTone } from "@/components/seo/score-ring"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, Eyebrow } from "@/components/ui/card"
-import { getSession } from "@/lib/auth"
 import { CATEGORIES } from "@/lib/audit/groups"
 import type { AuditPayloadV2, AuditScores, AuditScoresV2, CategoryId, Finding, KeywordCheck, LogEntry, Recommendation, RecommendationV2 } from "@/lib/audit/types"
 import { getClient } from "@/lib/clients"
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
 import { db } from "@/lib/db"
 import { timeAgo } from "@/lib/format"
-import { activeAuditJob } from "@/lib/worker-jobs"
+import { isLive } from "@/lib/live"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "SEO Audit" }
@@ -121,19 +121,27 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
   const asked = Array.isArray(sp.audit) ? sp.audit[0] : sp.audit
   const selected = rows.find((r) => r.id === asked) ?? rows[0] ?? null
   const now = new Date()
-  const activeJob = await activeAuditJob(client.id, (await getSession())?.userId)
+  // On the live site audits are not run (and the Chrome tooling is never loaded); saved audits are still shown.
+  const live = isLive()
+  const activeJob = live ? null : (await import("@/lib/audit/jobs")).getActiveJob(client.id)
 
   return (
     <div className="space-y-6">
       <p className="-mt-3 text-sm text-muted-foreground">{client.name}</p>
 
-      <AuditRunner
-        key={client.id}
-        clientId={client.id}
-        website={client.website}
-        lastCrawled={rows[0] ? `${timeAgo(rows[0].createdAt, now)} (${stampLong(rows[0].createdAt)} GST)` : null}
-        activeJob={activeJob}
-      />
+      {live ? (
+        <LocalOnlyNotice title="Running an SEO audit">
+          {rows[0] && <p className="text-muted-foreground">Last audit: {timeAgo(rows[0].createdAt, now)} ({stampLong(rows[0].createdAt)} GST). Saved audits are shown below.</p>}
+        </LocalOnlyNotice>
+      ) : (
+        <AuditRunner
+          key={client.id}
+          clientId={client.id}
+          website={client.website}
+          lastCrawled={rows[0] ? `${timeAgo(rows[0].createdAt, now)} (${stampLong(rows[0].createdAt)} GST)` : null}
+          activeJob={activeJob}
+        />
+      )}
 
       {selected ? (
         <>
@@ -166,7 +174,7 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
           description={client.website ? "An audit crawls the site, runs Lighthouse and checks on-page SEO, schema, speed and indexing, then grades each area and lists what to fix first." : "Add the client's website to their profile, then come back to run an audit."}
         >
           {client.website ? (
-            <StartAuditButton />
+            live ? null : <StartAuditButton />
           ) : (
             <Link href={`/clients/${client.id}/edit`} className={buttonVariants()}>
               Add a website

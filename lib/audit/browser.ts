@@ -40,10 +40,7 @@ export async function launchBrowser(): Promise<Browser> {
     )
   }
   const puppeteer = (await import("puppeteer")).default
-  // Chrome will not start as root in a container without this, because the container has no user namespaces for its sandbox.
-  // Opt-in (the worker's Dockerfile sets it): on a normal machine the sandbox stays on.
-  const noSandbox = process.env.CHROME_NO_SANDBOX === "true" ? ["--no-sandbox"] : []
-  return puppeteer.launch({ executablePath, headless: true, args: ["--disable-dev-shm-usage", "--no-first-run", "--mute-audio", ...noSandbox] })
+  return puppeteer.launch({ executablePath, headless: true, args: ["--disable-dev-shm-usage", "--no-first-run", "--mute-audio"] })
 }
 
 /** The DevTools port of a launched browser, which Lighthouse connects to. */

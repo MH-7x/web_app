@@ -7,7 +7,7 @@ import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { generateSerpBrief } from "@/lib/generators/serp-brief"
 import { parseBriefOptions } from "@/lib/landing-page-types"
 import { getSession } from "@/lib/auth"
-import { forwardToWorker } from "@/lib/worker"
+import { isLive, liveDisabled } from "@/lib/live"
 
 // browser start-up, up to five pages, then one Gemini call
 export const maxDuration = 300
@@ -21,9 +21,7 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  // the long jobs run on the worker (see lib/worker.ts); with none configured they run right here
-  const forwarded = await forwardToWorker(request, session.userId, { timeoutMs: 290_000 }) // just under maxDuration
-  if (forwarded) return forwarded
+  if (isLive()) return liveDisabled("Competitor insights")
   try {
     const body = await readJson(request)
     if (typeof body.clientId !== "string" || !body.clientId) throw new BadRequestError("Select a client first.")

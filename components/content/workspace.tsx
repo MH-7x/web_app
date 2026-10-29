@@ -8,6 +8,7 @@ import { BlogPanel } from "@/components/content/blog-panel"
 import { FaqPanel } from "@/components/content/faq-panel"
 import { GbpPanel } from "@/components/content/gbp-panel"
 import { LandingPagePanel } from "@/components/content/landing-page-panel"
+import { LocalOnlyNotice } from "@/components/local-only-notice"
 import { MetaPanel } from "@/components/content/meta-panel"
 import { TYPE_TITLES } from "@/components/content/parts"
 import { Badge } from "@/components/ui/badge"
@@ -41,7 +42,8 @@ const TABS: { id: TabId; icon: typeof Store }[] = [
   { id: "landing", icon: LayoutTemplate },
 ]
 
-export function ContentWorkspace({ client }: { client: WorkspaceClient }) {
+/** landingPageDisabled: the live site. Landing pages (and competitor insights) are generated from the app on your computer. */
+export function ContentWorkspace({ client, landingPageDisabled }: { client: WorkspaceClient; landingPageDisabled: boolean }) {
   const [tab, setTab] = useState<TabId>("gbp")
 
   return (
@@ -104,7 +106,13 @@ export function ContentWorkspace({ client }: { client: WorkspaceClient }) {
         <MetaPanel client={client} />
       </div>
       <div id="panel-landing" role="tabpanel" aria-labelledby="tab-landing" hidden={tab !== "landing"}>
-        <LandingPagePanel client={client} />
+        {landingPageDisabled ? (
+          <LocalOnlyNotice title="The landing page generator">
+            <p className="text-muted-foreground">Landing pages you save from there are listed in this client&apos;s Content History.</p>
+          </LocalOnlyNotice>
+        ) : (
+          <LandingPagePanel client={client} />
+        )}
       </div>
     </div>
   )

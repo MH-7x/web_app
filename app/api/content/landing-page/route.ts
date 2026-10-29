@@ -6,9 +6,11 @@ import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { generateLandingPage } from "@/lib/generators/landing-page"
 import { parseLandingRequest } from "@/lib/landing-page-types"
 import { getSession } from "@/lib/auth"
+import { isLive, liveDisabled } from "@/lib/live"
 
-// a plan, a draft, section expansions and up to three revisions, each a model call. 300 seconds is the most a Vercel Hobby
-// function may run; on a Pro plan this can go up to 800 (and REVISE_UNTIL_MS in the generator can be raised with it).
+// Generation (a plan, a draft, section expansions, up to three revisions: each a model call) runs from the app on your
+// own computer, where no time limit applies, and is switched off on the live site (lib/live.ts). 300 is here only because
+// a Vercel Hobby plan refuses to deploy a function that asks for more.
 export const maxDuration = 300
 
 /**
@@ -20,6 +22,7 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (isLive()) return liveDisabled("Landing page generation")
   try {
     const body = await readJson(request)
     if (typeof body.clientId !== "string" || !body.clientId) throw new BadRequestError("Select a client first.")

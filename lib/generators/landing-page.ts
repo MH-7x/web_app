@@ -273,11 +273,10 @@ Write this page in Arabic. Every heading and sentence must be in Arabic script. 
 
 const LONG = { timeoutMs: 240_000, retries: 1 }
 /**
- * A revision is not started after this long, so the whole request stays inside the route's time limit (300 s on Vercel
- * Hobby, see maxDuration in app/api/content/landing-page/route.ts). A revision usually takes about a minute; if Gemini is
- * slow one can take longer, which is why this leaves a wide margin. Raise it together with maxDuration on a Pro plan.
+ * A revision is not started after this long, so a request cannot run on without end. Generation runs from the app on your
+ * own computer (it is switched off on the live site, see lib/live.ts), where this is the only limit.
  */
-const REVISE_UNTIL_MS = 150_000
+const REVISE_UNTIL_MS = 330_000
 const MAX_REVISIONS = 3
 
 /** Step one: decide the angle, the meta tags, the sections and their budgets, the keyword homes, the FAQ and the images. */

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { getSession } from "@/lib/auth"
-import { forwardToWorker } from "@/lib/worker"
+import { isLive, liveDisabled } from "@/lib/live"
 
 /** Poll an audit's progress. 404 means the server restarted since it began (jobs are in memory). */
 export async function GET(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
@@ -9,9 +9,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  // the long jobs run on the worker (see lib/worker.ts); with none configured they run right here
-  const forwarded = await forwardToWorker(request, session.userId)
-  if (forwarded) return forwarded
+  if (isLive()) return liveDisabled("The SEO audit")
   const { jobId } = await params
   const since = Number(new URL(request.url).searchParams.get("since"))
   const { getJob } = await import("@/lib/audit/jobs")
