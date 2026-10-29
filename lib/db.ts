@@ -1,4 +1,4 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
+import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import * as PrismaNamespace from "@/lib/generated/prisma/internal/prismaNamespace"
@@ -10,8 +10,14 @@ const globalForPrisma = globalThis as unknown as Cache
 const SCHEMA = JSON.stringify(Object.entries(PrismaNamespace).filter(([name]) => name.endsWith("ScalarFieldEnum")))
 
 function createClient() {
-  const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./dev.db" })
-  return new PrismaClient({ adapter })
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) throw new Error("DATABASE_URL is not set. Point it at a Postgres database (see .env.example).")
+  if (!/^postgres(ql)?:\/\//.test(connectionString)) {
+    throw new Error('DATABASE_URL must be a Postgres URL (postgres://...). It looks like the old SQLite value ("file:./dev.db"): see .env.example.')
+  }
+  // Serverless: every running instance holds its own pool, so keep it small and use the provider's pooled connection string.
+  const max = Number.parseInt(process.env.DATABASE_POOL_MAX ?? "", 10) || (process.env.NODE_ENV === "production" ? 5 : 10)
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString, max }) })
 }
 
 // In development the client is cached across hot reloads. If the schema changed since it was created, a stale client

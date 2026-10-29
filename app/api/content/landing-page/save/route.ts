@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       subtype: options.primaryKeyword,
       content: en ?? ar ?? "",
       contentAr: en !== null ? ar : null,
-      metadata: { options, model: getModelName(), result } as unknown as Prisma.InputJsonValue,
+      metadata: { options, model: await getModelName(), result } as unknown as Prisma.InputJsonValue,
     }
 
     if (typeof body.id === "string" && body.id) {

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 
-import { startAudit } from "@/lib/audit/jobs"
 import { assertPublicUrl } from "@/lib/audit/net"
 import type { AuditInput, KeywordPair } from "@/lib/audit/types"
 import { getClient } from "@/lib/clients"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { getSession } from "@/lib/auth"
+import { forwardToWorker } from "@/lib/worker"
 
 const stripWww = (h: string) => h.replace(/^www\./i, "").toLowerCase()
 
@@ -51,6 +51,9 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  // the long jobs run on the worker (see lib/worker.ts); with none configured they run right here
+  const forwarded = await forwardToWorker(request, session.userId)
+  if (forwarded) return forwarded
   try {
     const b = await readJson(request)
     if (typeof b.clientId !== "string" || !b.clientId) throw new BadRequestError("Select a client first.")
@@ -67,6 +70,7 @@ export async function POST(request: Request) {
 
     const input: AuditInput = { keywordPairs: parseKeywordPairs(b.keywordPairs, url) }
 
+    const { startAudit } = await import("@/lib/audit/jobs") // loads Chrome tooling: only where the audit really runs
     const job = startAudit(
       client.id,
       url.toString(),

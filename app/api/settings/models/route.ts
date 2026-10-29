@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 
-import { setEnvValue } from "@/lib/env-file"
+import { getGeminiApiKey, saveGeminiModel } from "@/lib/app-config"
 import { BadRequestError } from "@/lib/content-types"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { getModelName } from "@/lib/gemini"
 import { getSession } from "@/lib/auth"
 
 export type GeminiModelInfo = {
-  /** Id to put in GEMINI_MODEL, e.g. gemini-2.5-pro */
+  /** The model id to use, e.g. gemini-2.5-pro */
   name: string
   displayName: string
   description: string
@@ -39,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   try {
-    const apiKey = process.env.GEMINI_API_KEY
+    const apiKey = await getGeminiApiKey()
     if (!apiKey) throw new BadRequestError(INVALID_KEY)
 
     let res: Response
@@ -71,13 +71,13 @@ export async function GET() {
       .filter((m) => SUITABLE.test(m.name) && !UNSUITABLE.test(m.name))
       .sort((a, b) => a.name.localeCompare(b.name))
 
-    return NextResponse.json({ models, current: getModelName() })
+    return NextResponse.json({ models, current: await getModelName() })
   } catch (error) {
     return handleError(error, "settings/models")
   }
 }
 
-/** Save the chosen model as GEMINI_MODEL; applies to the running server immediately. */
+/** Save the chosen model. It applies to the next request. */
 export async function POST(request: Request) {
   const session = await getSession()
   if (!session) {
@@ -87,12 +87,7 @@ export async function POST(request: Request) {
     const b = await readJson(request)
     const model = typeof b.model === "string" ? b.model.trim().replace(/^models\//, "") : ""
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(model)) throw new BadRequestError("That is not a valid model name.")
-    try {
-      await setEnvValue("GEMINI_MODEL", model)
-    } catch (e) {
-      console.error("[settings/models]", e)
-      throw new BadRequestError("Could not write to the .env file. Check that it is not read-only.")
-    }
+    await saveGeminiModel(model)
     return NextResponse.json({ model })
   } catch (error) {
     return handleError(error, "settings/models")

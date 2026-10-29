@@ -68,7 +68,7 @@ export async function handleGenerate<T extends ContentType>(
         subtype: SUBTYPE[type](options as never),
         language,
         ...toColumns(type, result),
-        metadata: { options, model: getModelName(), result } as unknown as Prisma.InputJsonValue,
+        metadata: { options, model: await getModelName(), result } as unknown as Prisma.InputJsonValue,
       },
     })
 

@@ -1,46 +1,39 @@
+import { db } from "@/lib/db"
+
 /**
- * Failed-attempt counter kept in memory. It resets when the server restarts, and it is per process, which is fine for a
- * single-server install. After `max` failures the key is blocked until 15 minutes after the last one.
+ * Failed-attempt counter. It lives in the RateLimit table rather than in memory: on a serverless host every request may
+ * land on a different instance, so an in-memory counter would never reach its limit. After `max` failures a key is
+ * blocked until 15 minutes after the last one.
  */
 const WINDOW_MS = 15 * 60 * 1000
 const DEFAULT_MAX = 5
-const SWEEP_ABOVE = 1000
 
-type Entry = { count: number; resetAt: number }
-
-// kept on globalThis so dev hot reloads (which re-evaluate this file per route) share one table
-const g = globalThis as unknown as { __rateLimit?: Map<string, Entry> }
-const attempts = (g.__rateLimit ??= new Map<string, Entry>())
-
-function live(key: string, now: number) {
-  const e = attempts.get(key)
-  if (e && e.resetAt <= now) {
-    attempts.delete(key)
-    return undefined
-  }
-  return e
-}
-
-export function checkRateLimit(key: string, max = DEFAULT_MAX): { allowed: boolean; remainingAttempts: number; retryAfter?: number } {
+export async function checkRateLimit(key: string, max = DEFAULT_MAX): Promise<{ allowed: boolean; remainingAttempts: number; retryAfter?: number }> {
+  const row = await db.rateLimit.findUnique({ where: { key } })
   const now = Date.now()
-  const e = live(key, now)
-  if (!e) return { allowed: true, remainingAttempts: max }
-  if (e.count >= max) return { allowed: false, remainingAttempts: 0, retryAfter: Math.max(1, Math.ceil((e.resetAt - now) / 1000)) }
-  return { allowed: true, remainingAttempts: max - e.count }
+  if (!row || row.resetAt.getTime() <= now) return { allowed: true, remainingAttempts: max }
+  if (row.count >= max) return { allowed: false, remainingAttempts: 0, retryAfter: Math.max(1, Math.ceil((row.resetAt.getTime() - now) / 1000)) }
+  return { allowed: true, remainingAttempts: max - row.count }
 }
 
-export function recordFailedAttempt(key: string) {
-  const now = Date.now()
-  if (attempts.size > SWEEP_ABOVE) for (const k of attempts.keys()) live(k, now)
-  const e = live(key, now)
-  attempts.set(key, { count: (e?.count ?? 0) + 1, resetAt: now + WINDOW_MS })
+export async function recordFailedAttempt(key: string) {
+  const resetAt = new Date(Date.now() + WINDOW_MS)
+  // One atomic statement, so two simultaneous failures both count. A window that has already passed starts over at 1.
+  // resetAt is "timestamp without time zone" holding UTC, hence the explicit AT TIME ZONE 'UTC' on the comparison.
+  await db.$executeRaw`
+    INSERT INTO "RateLimit" ("key", "count", "resetAt") VALUES (${key}, 1, ${resetAt})
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE WHEN "RateLimit"."resetAt" <= (NOW() AT TIME ZONE 'UTC') THEN 1 ELSE "RateLimit"."count" + 1 END,
+      "resetAt" = ${resetAt}`
+  // housekeeping: rows whose window has passed carry no information
+  await db.rateLimit.deleteMany({ where: { resetAt: { lt: new Date() } } })
 }
 
-export function resetAttempts(key: string) {
-  attempts.delete(key)
+export async function resetAttempts(key: string) {
+  await db.rateLimit.deleteMany({ where: { key } })
 }
 
-/** The caller's IP. x-forwarded-for is only trustworthy behind a proxy that sets it, so limits are also keyed by email. */
+/** The caller's IP. x-forwarded-for is only trustworthy behind a proxy that sets it (Vercel does), so limits are also keyed by email. */
 export function getClientIp(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
   return forwarded || request.headers.get("x-real-ip")?.trim() || "unknown"

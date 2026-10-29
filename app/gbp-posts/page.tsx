@@ -12,10 +12,11 @@ import { buttonVariants } from "@/components/ui/button"
 import { formatPhone } from "@/lib/client-schema"
 import { getClient } from "@/lib/clients"
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
+import { getSession } from "@/lib/auth"
 import { getConnectionSummary } from "@/lib/gbp-api"
-import { getActiveGbpJob } from "@/lib/gbp-jobs"
 import { listPostsForMonth, listWizardClients } from "@/lib/gbp-posts"
 import { dateKey, isMonthKey } from "@/lib/gbp-posts-types"
+import { activeGbpJob } from "@/lib/worker-jobs"
 
 export const metadata: Metadata = { title: "GBP Posts" }
 
@@ -56,7 +57,8 @@ async function ActiveClientPosts({ searchParams }: { searchParams: PageProps<"/g
     )
   }
 
-  const [posts, wizardClients, gbp] = await Promise.all([listPostsForMonth(client.id, month), listWizardClients(), getConnectionSummary(client.id)])
+  const [posts, wizardClients, gbp, session] = await Promise.all([listPostsForMonth(client.id, month), listWizardClients(), getConnectionSummary(client.id), getSession()])
+  const activeJob = await activeGbpJob(client.id, session?.userId)
   return (
     <CalendarWorkspace
       key={`${client.id}-${month}`}
@@ -65,7 +67,7 @@ async function ActiveClientPosts({ searchParams }: { searchParams: PageProps<"/g
       today={today}
       posts={posts}
       wizardClients={wizardClients}
-      activeJob={getActiveGbpJob(client.id)}
+      activeJob={activeJob}
     />
   )
 }

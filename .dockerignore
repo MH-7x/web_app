@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+tsconfig.tsbuildinfo
+# regenerated inside the image by `prisma generate`
+lib/generated
+README.md
+docs

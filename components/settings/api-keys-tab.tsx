@@ -63,7 +63,7 @@ function ModelPicker({ activeModel, onChange, hasKey }: { activeModel: string; o
         <div>
           <h3 className="text-sm font-medium">Available Models</h3>
           <p className="text-xs text-muted-foreground">
-            Active: <span className="font-mono">{activeModel}</span>. Saved as GEMINI_MODEL in .env and applied immediately.
+            Active: <span className="font-mono">{activeModel}</span>. Saved in the database and applied immediately.
           </p>
         </div>
         <Button variant="outline" onClick={refresh} disabled={loading || !hasKey}>
@@ -135,7 +135,7 @@ export function ApiKeysTab({ initialMasked, model }: { initialMasked: string | n
       setEditing(false)
       setSaved(true)
       setTest({ state: "idle" })
-      toast.success("API key saved to .env")
+      toast.success("API key saved")
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong. Please try again."
       setError(message)
@@ -181,10 +181,10 @@ export function ApiKeysTab({ initialMasked, model }: { initialMasked: string | n
             </Button>
           </div>
         ) : (
-          <Input id="gemini-key" readOnly value={masked ?? ""} placeholder="No key in .env yet" className="h-10 font-mono" />
+          <Input id="gemini-key" readOnly value={masked ?? ""} placeholder="No key saved yet" className="h-10 font-mono" />
         )}
         <p className="text-xs text-muted-foreground">
-          Stored in the <code className="font-mono">.env</code> file on the machine running this app. The full key is never sent back to the browser. Changing it takes effect immediately, no restart needed.
+          Stored encrypted in the database. A key set in the server&apos;s environment variables (GEMINI_API_KEY) is used until you save one here. The full key is never sent back to the browser. Changing it takes effect immediately.
         </p>
       </div>
 
@@ -224,7 +224,7 @@ export function ApiKeysTab({ initialMasked, model }: { initialMasked: string | n
             </Button>
           </>
         )}
-        {saved && !editing && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved to .env.</span>}
+        {saved && !editing && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</span>}
       </div>
 
       {test.state === "ok" && (

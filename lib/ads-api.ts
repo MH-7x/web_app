@@ -47,7 +47,7 @@ export async function handleFacebook(request: Request) {
         subtype: `${req.objective} · ${req.emirates.length > 1 ? "all emirates" : req.emirates[0]}`,
         language,
         ...adsColumns(result),
-        metadata: { request: req, model: getModelName(), result } as unknown as Prisma.InputJsonValue,
+        metadata: { request: req, model: await getModelName(), result } as unknown as Prisma.InputJsonValue,
       },
     })
 

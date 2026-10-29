@@ -16,13 +16,14 @@ import { ScoreRing, scoreTone } from "@/components/seo/score-ring"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, Eyebrow } from "@/components/ui/card"
-import { getActiveJob } from "@/lib/audit/jobs"
+import { getSession } from "@/lib/auth"
 import { CATEGORIES } from "@/lib/audit/groups"
 import type { AuditPayloadV2, AuditScores, AuditScoresV2, CategoryId, Finding, KeywordCheck, LogEntry, Recommendation, RecommendationV2 } from "@/lib/audit/types"
 import { getClient } from "@/lib/clients"
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/constants"
 import { db } from "@/lib/db"
 import { timeAgo } from "@/lib/format"
+import { activeAuditJob } from "@/lib/worker-jobs"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "SEO Audit" }
@@ -120,6 +121,7 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
   const asked = Array.isArray(sp.audit) ? sp.audit[0] : sp.audit
   const selected = rows.find((r) => r.id === asked) ?? rows[0] ?? null
   const now = new Date()
+  const activeJob = await activeAuditJob(client.id, (await getSession())?.userId)
 
   return (
     <div className="space-y-6">
@@ -130,7 +132,7 @@ async function ActiveClientAudit({ searchParams }: { searchParams: PageProps<"/s
         clientId={client.id}
         website={client.website}
         lastCrawled={rows[0] ? `${timeAgo(rows[0].createdAt, now)} (${stampLong(rows[0].createdAt)} GST)` : null}
-        activeJob={getActiveJob(client.id)}
+        activeJob={activeJob}
       />
 
       {selected ? (

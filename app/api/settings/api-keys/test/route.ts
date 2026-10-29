@@ -12,7 +12,7 @@ export async function POST() {
   }
   try {
     await generateText("Reply with the single word OK.", { temperature: 0 })
-    return NextResponse.json({ ok: true, model: getModelName() })
+    return NextResponse.json({ ok: true, model: await getModelName() })
   } catch (error) {
     return handleError(error, "settings/api-keys/test")
   }

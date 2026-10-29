@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         subtype: month.label,
         language: "en",
         content: renderReportMarkdown(client.name, month, stats, report),
-        metadata: { month: month.key, metrics, previous: previous ?? null, report, model: getModelName() },
+        metadata: { month: month.key, metrics, previous: previous ?? null, report, model: await getModelName() },
       },
     })
     return NextResponse.json({ id: row.id, report })

@@ -13,6 +13,7 @@ import {
   verifySessionToken,
 } from "@/lib/auth-token"
 import { db } from "@/lib/db"
+import { WORKER_ROUTES, bearerMatches, isWorkerOnly } from "@/lib/worker-auth"
 
 /** A signed token only proves who logged in, not that they still may. Deactivated or deleted users are turned away here. */
 async function isActiveUser(userId: string) {
@@ -31,6 +32,13 @@ async function isActiveUser(userId: string) {
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // A worker is not a dashboard: it answers a short list of job routes, only to a caller holding the shared secret.
+  if (isWorkerOnly()) {
+    if (!WORKER_ROUTES.some((re) => re.test(pathname))) return NextResponse.json({ error: "Not found" }, { status: 404 })
+    if (pathname !== "/api/health" && !bearerMatches(request.headers.get("authorization"))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.next()
+  }
 
   // the layout reads the path from here; set (and overwritten) on every request so a client cannot choose it
   const headers = new Headers(request.headers)

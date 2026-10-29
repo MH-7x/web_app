@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 
 import { getClient } from "@/lib/clients"
-import { analyzeCompetitors } from "@/lib/competitor-analysis"
 import { parseCompetitorUrls } from "@/lib/competitor-types"
 import { BadRequestError } from "@/lib/content-types"
 import { fail, handleError, readJson } from "@/lib/gbp-posts-api"
 import { generateSerpBrief } from "@/lib/generators/serp-brief"
 import { parseBriefOptions } from "@/lib/landing-page-types"
 import { getSession } from "@/lib/auth"
+import { forwardToWorker } from "@/lib/worker"
 
 // browser start-up, up to five pages, then one Gemini call
 export const maxDuration = 300
@@ -21,6 +21,9 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  // the long jobs run on the worker (see lib/worker.ts); with none configured they run right here
+  const forwarded = await forwardToWorker(request, session.userId, { timeoutMs: 290_000 }) // just under maxDuration
+  if (forwarded) return forwarded
   try {
     const body = await readJson(request)
     if (typeof body.clientId !== "string" || !body.clientId) throw new BadRequestError("Select a client first.")
@@ -31,6 +34,7 @@ export async function POST(request: Request) {
     const client = await getClient(body.clientId)
     if (!client) return fail("That client no longer exists.", 404)
 
+    const { analyzeCompetitors } = await import("@/lib/competitor-analysis") // loads Chrome tooling
     const { summaries, errors } = await analyzeCompetitors(urls, { primary: options.primaryKeyword, secondary: options.secondaryKeywords }, { refresh: body.refresh === true })
     const brief = summaries.length ? await generateSerpBrief(client, options, summaries) : null
     return NextResponse.json({ urls, pages: summaries, errors, brief })

@@ -1,3 +1,4 @@
+import { getGeminiApiKey } from "@/lib/app-config"
 import { GbpApiError } from "@/lib/gbp-api"
 import type { PlaceResult } from "@/lib/reviews-types"
 
@@ -10,21 +11,22 @@ const TIMEOUT_MS = 15_000
 export class PlacesApiError extends GbpApiError {}
 
 /** The key for Places calls: a Maps Platform key if one is set, otherwise the Gemini key (it works only if Places API (New) is enabled on its project). */
-function apiKey() {
-  const key = (process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACES_API_KEY || process.env.GEMINI_API_KEY || "").trim()
-  if (!key) throw new PlacesApiError("No Google API key is set. Add GOOGLE_MAPS_API_KEY to your .env file and restart the server.", 500)
+async function apiKey() {
+  const key = (process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACES_API_KEY || (await getGeminiApiKey()) || "").trim()
+  if (!key) throw new PlacesApiError("No Google API key is set. Add GOOGLE_MAPS_API_KEY to the server's environment variables (Vercel project settings, or .env locally) and redeploy or restart.", 500)
   return key
 }
 
 type PlacesErrorBody = { error?: { code?: number; message?: string; status?: string } }
 
 async function places<T>(path: string, fieldMask: string, init: { method: "GET" } | { method: "POST"; body: unknown }): Promise<T> {
+  const key = await apiKey() // before the try: a missing key must not be reported as a connection problem
   let res: Response
   try {
     res = await fetch(`${PLACES_URL}${path}`, {
       method: init.method,
       headers: {
-        "X-Goog-Api-Key": apiKey(),
+        "X-Goog-Api-Key": key,
         "X-Goog-FieldMask": fieldMask,
         ...(init.method === "POST" ? { "Content-Type": "application/json" } : {}),
       },

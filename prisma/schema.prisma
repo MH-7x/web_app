@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Client {
@@ -285,4 +285,14 @@ model SessionLog {
 
   @@index([userId, createdAt])
   @@index([createdAt])
+}
+
+/// Failed-attempt counters for the login / password-reset rate limiter. Kept in the database, not memory, so every
+/// serverless instance sees the same counts. Rows are deleted once their window has passed.
+model RateLimit {
+  key     String   @id // "login:ip:1.2.3.4", "login:email:a@b.com", ...
+  count   Int      @default(0)
+  resetAt DateTime // the block (or the count) lasts until here
+
+  @@index([resetAt])
 }

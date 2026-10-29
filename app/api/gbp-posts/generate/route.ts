@@ -6,6 +6,7 @@ import { startPostsJob } from "@/lib/gbp-jobs"
 import { handleError, readJson } from "@/lib/gbp-posts-api"
 import { MAX_KEYWORDS, MAX_WEEKS, POST_LANGUAGES, POSTS_PER_WEEK, isDateKey, type PostLanguage } from "@/lib/gbp-posts-types"
 import { getSession } from "@/lib/auth"
+import { forwardToWorker } from "@/lib/worker"
 
 /**
  * Start writing posts: `weeks` weeks at exactly 3 posts a week, covering the given keywords, in the chosen language.
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  // the long jobs run on the worker (see lib/worker.ts); with none configured they run right here
+  const forwarded = await forwardToWorker(request, session.userId)
+  if (forwarded) return forwarded
   try {
     const b = await readJson(request)
     if (typeof b.clientId !== "string" || !b.clientId) throw new BadRequestError("Choose a business first.")

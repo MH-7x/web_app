@@ -30,10 +30,10 @@ function whereFor({ q, emirate, category }: ClientFilters): Prisma.ClientWhereIn
     ...(term
       ? {
           OR: [
-            { name: { contains: term } },
-            { nameAr: { contains: term } },
-            { emirate: { contains: term } },
-            { website: { contains: term } },
+            { name: { contains: term, mode: "insensitive" } },
+            { nameAr: { contains: term, mode: "insensitive" } },
+            { emirate: { contains: term, mode: "insensitive" } },
+            { website: { contains: term, mode: "insensitive" } },
           ],
         }
       : {}),
@@ -155,7 +155,7 @@ export async function listClientContent(clientId: string, opts: { type?: string;
     where: {
       clientId,
       ...(opts.type ? { type: opts.type } : {}),
-      ...(q ? { OR: [{ content: { contains: q } }, { contentAr: { contains: q } }, { subtype: { contains: q } }] } : {}),
+      ...(q ? { OR: [{ content: { contains: q, mode: "insensitive" } }, { contentAr: { contains: q, mode: "insensitive" } }, { subtype: { contains: q, mode: "insensitive" } }] } : {}),
     },
     orderBy: { createdAt: "desc" },
     take: 100,

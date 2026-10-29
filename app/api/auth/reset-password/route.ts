@@ -29,9 +29,9 @@ export async function POST(request: Request) {
     if (b.step === "question") {
       const email = normalizeEmail(b.email)
       const key = `reset-question:${ip}`
-      const limit = checkRateLimit(key, LOOKUPS_PER_WINDOW)
+      const limit = await checkRateLimit(key, LOOKUPS_PER_WINDOW)
       if (!limit.allowed) return NextResponse.json({ error: retryMessage(limit.retryAfter ?? 900), retryAfter: limit.retryAfter }, { status: 429 })
-      recordFailedAttempt(key) // every lookup counts, so the question cannot be used to scan for emails
+      await recordFailedAttempt(key) // every lookup counts, so the question cannot be used to scan for emails
       const user = email ? await db.user.findUnique({ where: { email }, select: { securityQuestion: true, isActive: true } }) : null
       const question = user?.isActive && user.securityQuestion ? user.securityQuestion : decoyQuestion(email)
       return NextResponse.json({ question })
@@ -42,8 +42,7 @@ export async function POST(request: Request) {
       const answer = typeof b.answer === "string" ? normalizeAnswer(b.answer) : ""
       const ipKey = `reset:ip:${ip}`
       const emailKey = `reset:email:${email}`
-      const byIp = checkRateLimit(ipKey)
-      const byEmail = checkRateLimit(emailKey)
+      const [byIp, byEmail] = await Promise.all([checkRateLimit(ipKey), checkRateLimit(emailKey)])
       if (!byIp.allowed || !byEmail.allowed) {
         const retryAfter = Math.max(byIp.retryAfter ?? 0, byEmail.retryAfter ?? 0)
         return NextResponse.json({ error: retryMessage(retryAfter), retryAfter }, { status: 429 })
@@ -53,12 +52,10 @@ export async function POST(request: Request) {
       const usable = !!user && user.isActive && !!user.securityAnswer && !!answer
       const ok = usable ? await comparePassword(answer, user.securityAnswer) : await compareAgainstDummy(answer)
       if (!usable || !ok) {
-        recordFailedAttempt(ipKey)
-        recordFailedAttempt(emailKey)
+        await Promise.all([recordFailedAttempt(ipKey), recordFailedAttempt(emailKey)])
         return NextResponse.json({ error: WRONG }, { status: 401 })
       }
-      resetAttempts(ipKey)
-      resetAttempts(emailKey)
+      await Promise.all([resetAttempts(ipKey), resetAttempts(emailKey)])
       const resetToken = await signResetToken({ userId: user.id, email: user.email, pv: hashTail(user.passwordHash) })
       return NextResponse.json({ verified: true, resetToken })
     }
